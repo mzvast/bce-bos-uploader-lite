@@ -6,7 +6,7 @@
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
     "fecs": "fecs src",
-    "pack": "node_modules/.bin/browserify -s baidubce.bos.Uploader src/uploader.js -o bce-bos-uploader.bundle.js && closure-compiler --js bce-bos-uploader.bundle.js --js_output_file bce-bos-uploader.bundle.min.js"
+    "pack": "node_modules/.bin/browserify -s baidubce.bos.Uploader src/uploader.js -p bundle-collapser/plugin -o bce-bos-uploader.bundle.js && closure-compiler --js bce-bos-uploader.bundle.js --js_output_file bce-bos-uploader.bundle.min.js"
   },
   "repository": {
     "type": "git",
@@ -23,6 +23,7 @@
   },
   "devDependencies": {
     "browserify": "10.2.6",
+    "bundle-collapser": "^1.2.1",
     "http-proxy": "^1.13.2"
   }
 }
