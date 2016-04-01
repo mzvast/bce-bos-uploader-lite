@@ -63,7 +63,7 @@
           <form class="form-inline">
             <div class="form-group">
               <span class="btn btn-default btn-file">
-                <span class="glyphicon glyphicon-paperclip"></span> 选择(100M以内)的文件
+                <span class="glyphicon glyphicon-paperclip"></span> 选择500M以内的文件
                 <input type="file" id="file" />
               </span>
               <button type="submit" class="btn btn-success" disabled>开始上传</button>
@@ -164,12 +164,15 @@
       uptoken_url: 'http://180.76.133.248:1337/ack',
       auto_start: false,
       max_retries: 2,
+      max_file_size: '500mb',
+      chunk_size: '1m',
+      bos_multipart_local_key_generator: 'md5',
       init: {
         FilesFilter: function (_, files) {
           var returnValue = [];
           for (var i = 0; i < files.length; i ++) {
             var file = files[i];
-            if (/\.(zip|rar|pdf)$/i.test(file.name)) {
+            if (/\.(zip|rar|pdf|avi)$/i.test(file.name)) {
               returnValue.push(file);
             }
           }

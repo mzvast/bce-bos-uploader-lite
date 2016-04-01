@@ -55,7 +55,11 @@ var kDefaultOptions = {
     chunk_size: '4mb',
 
     // 分块上传时,是否允许断点续传，默认（true）
-    bos_multipart_auto_continue: true
+    bos_multipart_auto_continue: true,
+
+    // 分开上传的时候，localStorage里面key的生成方式，默认是 `default`
+    // 如果需要自定义，可以通过 XXX
+    bos_multipart_local_key_generator: 'default'
 };
 
 var kPostInit = 'PostInit';
@@ -435,13 +439,13 @@ Uploader.prototype._uploadNextViaMultipart = function (file) {
                 });
             });
             // 全部上传结束后删除localStorage
-            utils.generateLocalKey({
+            self._generateLocalKey({
                 blob: file,
                 chunkSize: chunkSize,
                 bucket: bucket,
                 object: object
-            }).then(function (localSaveKey) {
-                utils.removeUploadId(localSaveKey);
+            }).then(function (key) {
+                utils.removeUploadId(key);
             });
             return self.client.completeMultipartUpload(bucket, object, uploadId, partList);
         })
@@ -457,6 +461,11 @@ Uploader.prototype._uploadNextViaMultipart = function (file) {
             // 上传结束（成功/失败），开始下一个
             return self._uploadNext(self._getNext());
         });
+};
+
+Uploader.prototype._generateLocalKey = function (options) {
+    var generator = this.options.bos_multipart_local_key_generator;
+    return utils.generateLocalKey(options, generator);
 };
 
 Uploader.prototype._initiateMultipartUpload = function (file, chunkSize, bucket, object, options) {
@@ -483,7 +492,7 @@ Uploader.prototype._initiateMultipartUpload = function (file, chunkSize, bucket,
         object: object
     };
     var promise = this.options.bos_multipart_auto_continue
-        ? utils.generateLocalKey(keyOptions)
+        ? this._generateLocalKey(keyOptions)
         : sdk.Q.resolve(null);
 
     return promise.then(function (key) {
