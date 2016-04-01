@@ -647,13 +647,6 @@ Uploader.prototype._uploadNext = function (file, opt_maxRetries) {
         });
 };
 
-Uploader.prototype._listParts = function (bucket, object, uploadId) {
-    return this.client.listParts(bucket, object, uploadId)
-        .then(function (response) {
-            return response.body.parts;
-        });
-};
-
 module.exports = Uploader;
 
 /* vim: set ts=4 sw=4 sts=4 tw=120: */
