@@ -166,13 +166,14 @@
       max_retries: 2,
       max_file_size: '500mb',
       chunk_size: '1m',
+      dir_selection: true,
       bos_multipart_local_key_generator: 'md5',
       init: {
         FilesFilter: function (_, files) {
           var returnValue = [];
           for (var i = 0; i < files.length; i ++) {
             var file = files[i];
-            if (/\.(zip|rar|pdf|avi)$/i.test(file.name)) {
+            if (/\.(zip|rar|pdf|avi|mp3)$/i.test(file.name)) {
               returnValue.push(file);
             }
           }

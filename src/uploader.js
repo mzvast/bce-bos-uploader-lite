@@ -59,7 +59,10 @@ var kDefaultOptions = {
 
     // 分开上传的时候，localStorage里面key的生成方式，默认是 `default`
     // 如果需要自定义，可以通过 XXX
-    bos_multipart_local_key_generator: 'default'
+    bos_multipart_local_key_generator: 'default',
+
+    // 是否允许选择目录
+    dir_selection: false
 };
 
 var kPostInit = 'PostInit';
@@ -88,41 +91,6 @@ var kUploadComplete = 'UploadComplete';
  * @param {Object|string} options 配置参数
  */
 function Uploader(options) {
-    // 已经支持的参数
-    // options.runtimes
-    // options.browse_button
-    // options.uptoken_url
-    // options.uptoken
-    // options.max_file_size
-    // options.max_retries
-    // options.chunk_size
-    // options.auto_start
-    // options.bos_endpoint
-    // options.bos_bucket
-    // options.bos_multipart_min_size
-    // options.bos_multipart_auto_continue
-    // options.multi_selection
-    // options.init.PostInit
-    // options.init.FileFiltered
-    // options.init.FilesAdded
-    // options.init.BeforeUpload
-    // options.init.UploadProgress
-    // options.init.FileUploaded
-    // options.init.Error
-    // options.init.UploadComplete
-
-    // 暂时不支持的参数
-    // options.filters
-    // options.get_new_uptoken
-    // options.unique_names
-    // options.save_key
-    // options.domain
-    // options.container
-    // options.flash_swf_url
-    // options.dragdrop
-    // options.drop_element
-    // options.init.Key
-
     if (u.isString(options)) {
         // 支持简便的写法，可以从 DOM 里面分析相关的配置.
         options = u.extend({
@@ -267,6 +235,12 @@ Uploader.prototype._init = function () {
         btn.attr('multiple', !!this.options.multi_selection);
     }
     btn.on('change', u.bind(this._onFilesAdded, this));
+
+    if (this.options.dir_selection) {
+        btn.attr('directory', true);
+        btn.attr('mozdirectory', true);
+        btn.attr('webkitdirectory', true);
+    }
 
     this.client.on('progress', u.bind(this._onUploadProgress, this));
     // XXX 必须绑定 error 的处理函数，否则会 throw new Error

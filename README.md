@@ -67,6 +67,7 @@ var uploader = new baidubce.bos.Uploader({
 |uptoken|N|无|sts token的内容|
 |auth_stripped_headers|N|['User-Agent', 'Connection']|如果计算签名的时候，需要剔除一些headers，可以配置这个参数|
 |multi_selection|N|false|是否可以选择多个文件|
+|dir_selection|N|false|是否允许选择目录(有些浏览器开启了这个选型之后，只能选择目录，无法选择文件)|
 |max_retries|N|0|如果上传文件失败之后，支持的重试次数。默认不重试|
 |auto_start|N|false|选择文件之后，是否自动上传|
 |max_file_size|N|100M|可以选择的最大文件，超过这个值之后，会被忽略掉|
