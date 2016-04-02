@@ -75,6 +75,8 @@ var uploader = new baidubce.bos.Uploader({
 |chunk_size|N|4M|分片上传的时候，每个分片的大小（如果没有切换到分片上传的策略，这个值没意义）|
 |bos_multipart_auto_continue|N|true|是否开启断点续传，如果设置成false，则UploadResume和UploadResumeError事件不会生效|
 |bos_multipart_local_key_generator|N|defaults|计算localStorage里面key的策略，可选值有`defaults`和`md5`|
+|flash_swf_url|-|-|Flash文件的地址|
+|accept|-|-|过滤的属性??|
 
 下列属性暂时不支持，看用户反馈再进行升级
 
@@ -85,7 +87,6 @@ var uploader = new baidubce.bos.Uploader({
 |save_key|-|-|-|
 |domain|-|-|-|
 |container|-|-|-|
-|flash_swf_url|-|-|Flash文件的地址|
 |dragdrop|-|-|-|
 |drop_element|-|-|-|
 

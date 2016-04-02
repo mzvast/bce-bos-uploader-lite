@@ -90,6 +90,54 @@ exports.isPromise = function (value) {
 };
 
 /**
+ * 判断一下浏览器是否支持 xhr2 特性，如果不支持，就 fallback 到 PostObject
+ * 来上传文件
+ *
+ * @return {boolean}
+ */
+exports.isXhr2Supported = function () {
+    // https://github.com/Modernizr/Modernizr/blob/f839e2579da2c6331eaad922ae5cd691aac7ab62/feature-detects/network/xhr2.js
+    return 'XMLHttpRequest' in window && 'withCredentials' in new XMLHttpRequest();
+};
+
+
+/**
+ * 使用 PostObject 接口上传文件的时候，需要有默认的签名内容
+ *
+ * @param {string} bucket The bucket name.
+ * @return {Object}
+ */
+exports.getDefaultPolicy = function (bucket) {
+    if (bucket == null) {
+        return null;
+    }
+
+    var now = new Date().getTime();
+
+    // 默认是 24小时 之后到期
+    var expiration = new Date(now + 24 * 60 * 60 * 1000);
+    var utcDateTime = expiration.toISOString().replace(/\.\d+Z$/, 'Z');
+
+    return {
+        expiration: utcDateTime,
+        conditions: [
+            {bucket: bucket}
+        ]
+    };
+};
+
+/**
+ * 生成uuid
+ *
+ * @return {string}
+ */
+exports.uuid = function () {
+    var random = (Math.random() * Math.pow(2, 32)).toString(36);
+    var timestamp = new Date().getTime();
+    return 'u-' + timestamp + '-' + random;
+};
+
+/**
  * 生成本地 localStorage 中的key，来存储 uploadId
  * localStorage[key] = uploadId
  *
