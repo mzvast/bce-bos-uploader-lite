@@ -124,6 +124,9 @@ var uploader = new baidubce.bos.Uploader({
     UploadPartProgress: function (_, file, progress, event) {
       // 分片上传的时候，单个分片的上传进度
     },
+    ChunkUploaded: function (_, file, result) {
+      // 分片上传的时候，单个分片上传结束
+    },
     Error: function (_, error, file) {
       // 如果上传的过程中出错了，调用这个函数
     },

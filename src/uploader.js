@@ -78,6 +78,7 @@ var kBeforeUpload = 'BeforeUpload';
 var kUploadProgress = 'UploadProgress';
 var kFileUploaded = 'FileUploaded';
 var kUploadPartProgress = 'UploadPartProgress';
+var kChunkUploaded = 'ChunkUploaded';
 var kUploadResume = 'UploadResume'; // 断点续传
 var kUploadResumeError = 'UploadResumeError'; // 尝试断点续传失败
 
@@ -217,7 +218,9 @@ Uploader.prototype._invoke = function (methodName, args) {
     }
 
     try {
-        return method.apply(null, args == null ? [] : args);
+        var up = null;
+        args = args == null ? [up] : [up].concat(args);
+        return method.apply(null, args);
     }
     catch (ex) {
         debug('%s(%j) -> %s', methodName, args, ex);
@@ -257,7 +260,7 @@ Uploader.prototype._filterFiles = function (candidates) {
 
     var files = u.filter(candidates, function (file) {
         if (maxFileSize > 0 && file.size > maxFileSize) {
-            self._invoke(kFileFiltered, [null, file]);
+            self._invoke(kFileFiltered, [file]);
             return false;
         }
 
@@ -267,13 +270,13 @@ Uploader.prototype._filterFiles = function (candidates) {
         return true;
     });
 
-    return this._invoke(kFilesFilter, [null, files]) || files;
+    return this._invoke(kFilesFilter, [files]) || files;
 };
 
 Uploader.prototype._onFilesAdded = function (e) {
     var files = this._filterFiles(e.target.files);
     if (u.isArray(files) && files.length) {
-        this._invoke(kFilesAdded, [null, files]);
+        this._invoke(kFilesAdded, [files]);
         this._files.push.apply(this._files, files);
     }
 
@@ -284,7 +287,7 @@ Uploader.prototype._onFilesAdded = function (e) {
 
 Uploader.prototype._onError = function (e) {
     debug(e);
-    // this._invoke(kError, [null, e, this._currentFile]);
+    // this._invoke(kError, [e, this._currentFile]);
 };
 
 Uploader.prototype._onUploadProgress = function (e) {
@@ -299,12 +302,12 @@ Uploader.prototype._onUploadProgress = function (e) {
 
         var partNumber = headers['x-bce-meta-part-number'];
         if (partNumber != null) {
-            this._invoke(kUploadPartProgress, [null, this._currentFile, progress, e]);
+            this._invoke(kUploadPartProgress, [this._currentFile, progress, e]);
             return;
         }
     }
 
-    this._invoke(kUploadProgress, [null, this._currentFile, progress, e]);
+    this._invoke(kUploadProgress, [this._currentFile, progress, e]);
 };
 
 Uploader.prototype.start = function () {
@@ -363,13 +366,13 @@ Uploader.prototype._uploadNextViaMultipart = function (file) {
     var multipartParallel = this.options.bos_multipart_parallel;
     var chunkSize = this.options.chunk_size;
 
-    var returnValue = this._invoke(kBeforeUpload, [null, file]);
+    var returnValue = this._invoke(kBeforeUpload, [file]);
     if (returnValue === false) {
         return this._uploadNext(this._getNext());
     }
 
     // 可能会重命名
-    returnValue = this._invoke(kKey, [null, file]);
+    returnValue = this._invoke(kKey, [file]);
     object = returnValue || object;
     this._initiateMultipartUpload(file, chunkSize, bucket, object, options)
         .then(function (response) {
@@ -389,7 +392,7 @@ Uploader.prototype._uploadNextViaMultipart = function (file) {
                 total: tasks.length
             };
             if (loaded) {
-                self._invoke(kUploadProgress, [null, file, loaded / tasks.length, null]);
+                self._invoke(kUploadProgress, [file, loaded / tasks.length, null]);
             }
 
             async.mapLimit(tasks, multipartParallel, self._uploadPart(state),
@@ -426,10 +429,10 @@ Uploader.prototype._uploadNextViaMultipart = function (file) {
         .then(function (response) {
             response.body.bucket = bucket;
             response.body.object = object;
-            self._invoke(kFileUploaded, [null, file, response]);
+            self._invoke(kFileUploaded, [file, response]);
         })
         .catch(function (error) {
-            self._invoke(kError, [null, error, file]);
+            self._invoke(kError, [error, file]);
         })
         .fin(function () {
             // 上传结束（成功/失败），开始下一个
@@ -486,7 +489,7 @@ Uploader.prototype._initiateMultipartUpload = function (file, chunkSize, bucket,
             if (uploadId && localSaveKey) {
                 var parts = response.body.parts;
                 // listParts 的返回结果
-                self._invoke(kUploadResume, [null, file, parts, null]);
+                self._invoke(kUploadResume, [file, parts, null]);
                 response.body.uploadId = uploadId;
             }
             return response;
@@ -494,7 +497,7 @@ Uploader.prototype._initiateMultipartUpload = function (file, chunkSize, bucket,
         .catch(function (error) {
             if (uploadId && localSaveKey) {
                 // 如果获取已上传分片失败，则重新上传。
-                self._invoke(kUploadResumeError, [null, file, error, null]);
+                self._invoke(kUploadResumeError, [file, error, null]);
                 utils.removeUploadId(localSaveKey);
                 return initNewMultipartUpload();
             }
@@ -528,7 +531,15 @@ Uploader.prototype._uploadPart = function (state) {
             .then(function (response) {
                 ++state.loaded;
                 var progress = state.loaded / state.total;
-                self._invoke(kUploadProgress, [null, self._currentFile, progress, null]);
+                self._invoke(kUploadProgress, [self._currentFile, progress, null]);
+
+                var result = {
+                    offset: item.start,
+                    total: blob.size,
+                    response: response
+                };
+                self._invoke(kChunkUploaded, [self._currentFile, result]);
+
                 return response;
             })
             .catch(function (error) {
@@ -593,13 +604,13 @@ Uploader.prototype._uploadNext = function (file, opt_maxRetries) {
     var maxRetries = opt_maxRetries == null
         ? this.options.max_retries
         : opt_maxRetries;
-    var returnValue = this._invoke(kBeforeUpload, [null, file]);
+    var returnValue = this._invoke(kBeforeUpload, [file]);
     if (returnValue === false) {
         return this._uploadNext(this._getNext());
     }
 
     // 可能会重命名
-    returnValue = this._invoke(kKey, [null, file]);
+    returnValue = this._invoke(kKey, [file]);
     object = returnValue || object;
 
     return this.client.putObjectFromBlob(bucket, object, file, options)
@@ -607,16 +618,16 @@ Uploader.prototype._uploadNext = function (file, opt_maxRetries) {
             if (file.size <= 0) {
                 // 如果文件大小为0，不会触发 xhr 的 progress 事件，因此
                 // 在上传成功之后，手工触发一次
-                self._invoke(kUploadProgress, [null, file, 1]);
+                self._invoke(kUploadProgress, [file, 1]);
             }
             response.body.bucket = bucket;
             response.body.object = object;
-            self._invoke(kFileUploaded, [null, file, response]);
+            self._invoke(kFileUploaded, [file, response]);
             // 上传成功，开始下一个
             return self._uploadNext(self._getNext());
         })
         .catch(function (error) {
-            self._invoke(kError, [null, error, file]);
+            self._invoke(kError, [error, file]);
             if (error.status_code && error.code && error.request_id) {
                 // 应该是正常的错误（比如签名异常），这种情况就不要重试了
                 return self._uploadNext(self._getNext());

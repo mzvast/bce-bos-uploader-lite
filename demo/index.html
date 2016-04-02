@@ -166,7 +166,7 @@
       max_retries: 2,
       max_file_size: '500mb',
       chunk_size: '1m',
-      dir_selection: true,
+      dir_selection: false,
       bos_multipart_local_key_generator: 'md5',
       init: {
         FilesFilter: function (_, files) {
@@ -236,6 +236,9 @@
         },
         UploadComplete: function () {
           // TODO
+        },
+        ChunkUploaded: function (_, file, result) {
+          console.log(result);
         },
         Error: function (_, error, file) {
           var row = getRowById(file.__id);
