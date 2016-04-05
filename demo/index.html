@@ -5,10 +5,12 @@
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>bce-bos-uploader simple demo</title>
     <link rel="stylesheet" type="text/css" href="../bower_components/bootstrap/dist/css/bootstrap.min.css" />
-    <script src="../bower_components/jquery/dist/jquery.min.js"></script>
-    <script src="../bower_components/plupload/js/plupload.full.min.js"></script>
+    <!--[if lt IE 9]><script src="../bower_components/js-polyfills/es5.js"></script><![endif]-->
+    <!--[if lt IE 10]><script src="../bower_components/moxie/bin/js/moxie.js"></script><![endif]-->
+    <script src="../bower_components/jquery/dist/jquery.js"></script>
+    <!--script src="../bower_components/plupload/js/plupload.full.min.js"></script-->
     <script src="../bower_components/humanize/humanize.js"></script>
-    <script src="../bce-bos-uploader.bundle.min.js"></script>
+    <script src="../bce-bos-uploader.bundle.js"></script>
     <style type="text/css">
     .empty,
     .f-status {
@@ -52,7 +54,7 @@
     </style>
   </head>
   <body>
-    <a href="https://github.com/leeight/bce-bos-uploader"><img style="position: absolute; top: 0; right: 0; border: 0;" src="https://camo.githubusercontent.com/a6677b08c955af8400f44c6298f40e7d19cc5b2d/68747470733a2f2f73332e616d617a6f6e6177732e636f6d2f6769746875622f726962626f6e732f666f726b6d655f72696768745f677261795f3664366436642e706e67" alt="Fork me on GitHub" data-canonical-src="https://s3.amazonaws.com/github/ribbons/forkme_right_gray_6d6d6d.png"></a>
+    <a href="https://github.com/leeight/bce-bos-uploader"><img style="position: absolute; top: 0; right: 0; border: 0;" src="forkme_right_gray_6d6d6d.png" alt="Fork me on GitHub" data-canonical-src="https://s3.amazonaws.com/github/ribbons/forkme_right_gray_6d6d6d.png"></a>
     <div class="container">
       <div class="row">
         <div class="col-md-12">
@@ -92,16 +94,6 @@
               </tr>
             </tbody>
           </table>
-        </div>
-      </div>
-      <div class="row">
-        <div class="col-md-12">
-          <h2>plupload</h2>
-
-          <div id="container">
-            <a id="browse" href="javascript:;">[Browse...]</a> 
-            <a id="start-upload" href="javascript:;">[Start Upload]</a>
-          </div>
         </div>
       </div>
     </div>
@@ -167,17 +159,12 @@
       max_file_size: '500mb',
       chunk_size: '1m',
       dir_selection: false,
-      bos_multipart_local_key_generator: 'md5',
+      flash_swf_url: '../bower_components/moxie/bin/flash/Moxie.swf',
+      accept: 'zip,rar,pdf,avi,mp3,png,jpg,jpeg,gif',
+      // bos_multipart_local_key_generator: 'md5',
       init: {
         FilesFilter: function (_, files) {
-          var returnValue = [];
-          for (var i = 0; i < files.length; i ++) {
-            var file = files[i];
-            if (/\.(zip|rar|pdf|avi|mp3)$/i.test(file.name)) {
-              returnValue.push(file);
-            }
-          }
-          return returnValue;
+          // 添加更多的过滤规则，比如文件大小之类的
         },
         FilesAdded: function (_, files) {
           for (var i = 0; i < files.length; i++) {
@@ -253,43 +240,6 @@
       uploader.start();
       return false;
     });
-    </script>
-    <script>
-    (function () {
-      var uploader = new plupload.Uploader({
-        runtimes: 'html4',
-        browse_button: 'browse',
-        flash_swf_url: '../bower_components/plupload/js/Moxie.swf',
-        url: 'https://bos.qasandbox.bcetest.baidu.com/bcecdn/',
-        send_file_name: false,
-        multipart_params: {
-          'Content-Type': 'text/plain',
-          'x-bce-foo': 'bar',
-          'x-bce-bar': 'foo',
-          // 'success-action-status': '201',
-          // 'success-action-redirect': 'http://localhost.baidu.com/demo/relay.html'
-        }
-      });
-      uploader.bind('BeforeUpload', function (up, file) {
-        var params = up.getOption('multipart_params');
-        params.key = file.target_name || file.name;
-        params['success-action-redirect'] = 'http://localhost.baidu.com/demo/relay.html?id=' + file.id;
-      });
-      uploader.bind('UploadFile', function (up, file) {
-        console.log('UploadFile', file.percent, file.status);
-      });
-      uploader.bind('UploadProgress', function (up, file) {
-        console.log('UploadProgress', file.percent, file.status);
-      });
-      uploader.bind('FileUploaded', function (up, file, info) {
-        console.log('FileUploaded', file.percent, file.status, info);
-      });
-      uploader.init();
-
-      $('#start-upload').click(function () {
-        uploader.start();
-      });
-    })();
     </script>
   </body>
 </html>

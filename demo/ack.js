@@ -43,32 +43,47 @@ http.createServer(function (req, res) {
     var query = url.parse(req.url, true).query;
 
     var statusCode = 200;
+    var policy = null;
     var signature = null;
-    if (!query.httpMethod || !query.path || !query.params || !query.headers) {
-        statusCode = 403;
+
+    if (query.policy) {
+        var auth = new Auth(kCredentials.ak, kCredentials.sk);
+        policy = new Buffer(query.policy).toString('base64');
+        signature = auth.hash(policy, kCredentials.sk);
     }
-    else if (query.httpMethod !== 'PUT' && query.httpMethod !== 'POST') {
-        // 只允许 PUT/POST Method
-        statusCode = 403;
+    else if (query.httpMethod && query.path && query.params && query.headers) {
+        if (query.httpMethod !== 'PUT' && query.httpMethod !== 'POST' && query.httpMethod !== 'GET') {
+            // 只允许 PUT/POST/GET Method
+            statusCode = 403;
+        }
+        else {
+            var httpMethod = query.httpMethod;
+            var path = query.path;
+            var params = safeParse(query.params) || {};
+            var headers = safeParse(query.headers) || {};
+
+            var auth = new Auth(kCredentials.ak, kCredentials.sk);
+            signature = auth.generateAuthorization(httpMethod, path, params, headers);
+        }
     }
     else {
-        var httpMethod = query.httpMethod;
-        var path = query.path;
-        var params = safeParse(query.params) || {};
-        var headers = safeParse(query.headers) || {};
-
-        var auth = new Auth(kCredentials.ak, kCredentials.sk);
-        signature = auth.generateAuthorization(httpMethod, path, params, headers);
+        statusCode = 403;
     }
 
     // 最多10s的延迟
     var delay = Math.min(query.delay || 0, 10);
     setTimeout(function () {
-        var payload = {
-            statusCode: statusCode,
-            signature: signature,
-            xbceDate: new Date().toISOString().replace(/\.\d+Z$/, 'Z')
-        };
+        var payload = query.policy
+                      ? {
+                          accessKey: kCredentials.ak,
+                          policy: policy,
+                          signature: signature
+                      }
+                      : {
+                          statusCode: statusCode,
+                          signature: signature,
+                          xbceDate: new Date().toISOString().replace(/\.\d+Z$/, 'Z')
+                      };
 
         res.writeHead(statusCode, {
             'Content-Type': 'text/javascript; charset=utf-8',
