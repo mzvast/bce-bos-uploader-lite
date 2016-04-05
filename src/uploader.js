@@ -263,6 +263,7 @@ Uploader.prototype._invoke = function (methodName, args) {
  */
 Uploader.prototype._init = function () {
     var options = this.options;
+    var accept = options.accept;
 
     if (!this._xhr2Supported) {
         if (typeof mOxie !== 'undefined' && typeof mOxie.FileInput === 'function') {
@@ -274,7 +275,7 @@ Uploader.prototype._init = function () {
                 runtime_order: 'flash,html4',
                 browse_button: $(options.browse_button).get(0),
                 swf_url: options.flash_swf_url,
-                accept: options.accept,
+                accept: utils.expandAcceptToArray(accept),
                 multiple: options.multi_selection,
                 directory: options.dir_selection,
                 file: 'file'      // PostObject接口要求固定是 'file'
@@ -299,15 +300,19 @@ Uploader.prototype._init = function () {
         });
     }
     else {
-        var btn = $(this.options.browse_button);
+        var btn = $(options.browse_button);
         if (btn.attr('multiple') == null) {
             // 如果用户没有显示的设置过 multiple，使用 multi_selection 的设置
             // 否则保留 <input multiple /> 的内容
-            btn.attr('multiple', !!this.options.multi_selection);
+            btn.attr('multiple', !!options.multi_selection);
         }
         btn.on('change', u.bind(this._onFilesAdded, this));
 
-        if (this.options.dir_selection) {
+        if (accept != null) {
+            btn.attr('accept', utils.expandAccept(accept));
+        }
+
+        if (options.dir_selection) {
             btn.attr('directory', true);
             btn.attr('mozdirectory', true);
             btn.attr('webkitdirectory', true);

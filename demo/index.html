@@ -160,17 +160,11 @@
       chunk_size: '1m',
       dir_selection: false,
       flash_swf_url: '../bower_components/moxie/bin/flash/Moxie.swf',
+      accept: 'zip,rar,pdf,avi,mp3,png,jpg,jpeg,gif',
       // bos_multipart_local_key_generator: 'md5',
       init: {
         FilesFilter: function (_, files) {
-          var returnValue = [];
-          for (var i = 0; i < files.length; i ++) {
-            var file = files[i];
-            if (/\.(zip|rar|pdf|avi|mp3|exe)$/i.test(file.name)) {
-              returnValue.push(file);
-            }
-          }
-          return returnValue;
+          // 添加更多的过滤规则，比如文件大小之类的
         },
         FilesAdded: function (_, files) {
           for (var i = 0; i < files.length; i++) {

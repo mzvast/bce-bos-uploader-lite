@@ -15,7 +15,7 @@
  */
 
 var u = require('underscore');
-var Q = require('bce-sdk-js').Q;
+var sdk = require('bce-sdk-js');
 var SparkMD5 = require('spark-md5');
 
 /**
@@ -147,7 +147,7 @@ exports.uuid = function () {
  */
 exports.generateLocalKey = function (option, generator) {
     if (generator === 'default') {
-        return Q.resolve([
+        return sdk.Q.resolve([
             option.blob.name, option.blob.size,
             option.chunkSize, option.bucket,
             option.object
@@ -165,7 +165,7 @@ exports.generateLocalKey = function (option, generator) {
             ].join('&');
         });
     }
-    return Q.resolve(null);
+    return sdk.Q.resolve(null);
 };
 
 /**
@@ -184,7 +184,7 @@ exports.md5sum = function (file) {
     var spark = new SparkMD5.ArrayBuffer();
     var fileReader = new FileReader();
 
-    var deferred = Q.defer();
+    var deferred = sdk.Q.defer();
 
     fileReader.onload = function (e) {
         spark.append(e.target.result);
@@ -271,4 +271,53 @@ exports.filterTasks = function (tasks, parts) {
             task.etag = etag;
         }
     });
+};
+
+/**
+ * 把用户输入的配置转化成 html5 和 flash 可以接收的内容.
+ *
+ * @param {string|Array} accept 支持数组和字符串的配置
+ * @return {string}
+ */
+exports.expandAccept = function (accept) {
+    var exts = [];
+
+    if (u.isArray(accept)) {
+        // Flash要求的格式
+        u.each(accept, function (item) {
+            if (item.extensions) {
+                exts.push.apply(exts, item.extensions.split(','));
+            }
+        });
+    }
+    else if (u.isString(accept)) {
+        exts = accept.split(',');
+    }
+
+    // 为了保证兼容性，把 mimeTypes 和 exts 都返回回去
+    var mimeTypes = u.uniq(u.map(exts, function (ext) {
+        if (ext.indexOf('/') !== -1) {
+            return ext;
+        }
+        return sdk.MimeType.guess(ext);
+    }));
+    exts = u.filter(exts, function (ext) {
+        return ext.indexOf('/') === -1;
+    });
+
+    return mimeTypes.concat(exts).join(',');
+};
+
+exports.expandAcceptToArray = function (accept) {
+    if (!accept || u.isArray(accept)) {
+        return accept;
+    }
+
+    if (u.isString(accept)) {
+        return [
+            {title: 'All files', extensions: accept}
+        ];
+    }
+
+    return [];
 };
