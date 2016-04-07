@@ -735,6 +735,13 @@ Uploader.prototype._sendPostRequest = function (url, fields, file) {
     var self = this;
     var deferred = sdk.Q.defer();
 
+    if (u.isUndefined(mOxie)
+        || !u.isFunction(mOxie.FormData)
+        || !u.isFunction(mOxie.XMLHttpRequest)) {
+        deferred.reject(new Error('mOxie is undefined.'));
+        return deferred.promise;
+    }
+
     var formData = new mOxie.FormData();
     u.each(fields, function (value, name) {
         if (value == null) {
@@ -750,20 +757,21 @@ Uploader.prototype._sendPostRequest = function (url, fields, file) {
         if (xhr.readyState === 4) {
             if (xhr.status === 200) {
                 deferred.resolve({
-                    http_headers: xhr.getAllResponseHeaders(),
+                    http_headers: xhr.getAllResponseHeaders() || {},
                     body: {}
                 });
             }
             else {
-                deferred.reject(xhr.responseText);
-                // deferred.reject(xhr.getResponse('json'));
+                deferred.reject(new Error('Invalid response statusCode ' + xhr.status));
             }
         }
     };
-    xhr.upload.onprogress = function (e) {
-        var progress = e.loaded / e.total;
-        self._invoke(kUploadProgress, [file, progress, null]);
-    };
+    if (xhr.upload) {
+        xhr.upload.onprogress = function (e) {
+            var progress = e.loaded / e.total;
+            self._invoke(kUploadProgress, [file, progress, null]);
+        };
+    }
     xhr.bind('error', function (e) {
         deferred.reject(e);
     });
