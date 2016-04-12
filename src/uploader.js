@@ -140,7 +140,7 @@ function Uploader(options) {
      * @type {sdk.BosClient}
      */
     this.client = new sdk.BosClient({
-        endpoint: this.options.bos_endpoint,
+        endpoint: utils.normalizeEndpoint(this.options.bos_endpoint),
         credentials: credentials,
         sessionToken: this.options.uptoken
     });
