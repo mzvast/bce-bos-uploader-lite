@@ -5,10 +5,9 @@ DEMO地址是：<http://leeight.github.io/bce-bos-uploader/>
 
 ### 支持的浏览器
 
-<http://caniuse.com/#feat=fileapi>
-
-1. 桌面浏览器：IE10+, Firefox/Chrome/Opera 最新版
-2. 移动设备上面的未经过完整测试，暂时不确定支持的范围
+1. 基于Xhr2，可以支持：IE10+, Firefox/Chrome/Opera 最新版
+2. 借助[mOxie](https://github.com/moxiecode/moxie)，可以支持IE低版本（6,7,8,9）
+3. 移动设备上面的未经过完整测试，暂时不确定支持的范围
 
 ### 如何使用
 
@@ -24,6 +23,9 @@ bower install bce-bos-uploader
   <head>
     <meta charset="utf-8" />
     <title>bce-bos-uploader simple demo</title>
+    <!--[if lt IE 8]><script src="./bower_components/json3/lib/json3.min.js"></script><![endif]-->
+    <!--[if lt IE 9]><script src="./bower_components/js-polyfills/es5.js"></script><![endif]-->
+    <!--[if lt IE 10]><script src="./bower_components/moxie/bin/js/moxie.js"></script><![endif]-->
     <script src="./bower_components/jquery/dist/jquery.min.js"></script>
     <script src="./bower_components/bce-bos-uploader/bce-bos-uploader.bundle.js"></script>
   </head>
