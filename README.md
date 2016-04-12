@@ -5,7 +5,7 @@ DEMO地址是：<http://leeight.github.io/bce-bos-uploader/>
 
 ### 支持的浏览器
 
-1. 基于Xhr2，可以支持：IE10+, Firefox/Chrome/Opera 最新版
+1. 基于Xhr2和[File API](http://caniuse.com/#feat=fileapi)，可以支持：IE10+, Firefox/Chrome/Opera 最新版
 2. 借助[mOxie](https://github.com/moxiecode/moxie)，可以支持IE低版本（6,7,8,9）
 3. 移动设备上面的未经过完整测试，暂时不确定支持的范围
 
