@@ -1,24 +1,8 @@
-/**
- * Copyright (c) 2014 Baidu.com, Inc. All Rights Reserved
- *
- * Licensed under the Apache License, Version 2.0 (the "License"); you may not use this file except in compliance with
- * the License. You may obtain a copy of the License at
- *
- * http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software distributed under the License is distributed on
- * an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the License for the
- * specific language governing permissions and limitations under the License.
- *
- * @file demo/src/signature_server.js
- * @author leeight
- */
-
 var http = require('http');
 var url = require('url');
 var util = require('util');
 
-var Auth = require('baidubce-sdk').Auth;
+var sdk = require('bce-sdk-js');
 
 var kCredentials = {
     ak: 'b92ea4a39f3645c8ae5f64ba5fc2a357',
@@ -34,69 +18,87 @@ function safeParse(text) {
     }
 }
 
-// BosClient.prototype.createSignature = function (credentials, httpMethod, path, params, headers) {
-// http://signature_server/ack?httpMethod=$0&path=$1&params=$2&headers=$3
+function buildStsResponse(sts) {
+    var stsClient = new sdk.STS({
+        credentials: kCredentials,
+        region: 'bj'
+    });
+    return stsClient.getSessionToken(60 * 60 * 24, safeParse(sts)).then(function (response) {
+        var body = response.body;
+        return {
+            AccessKeyId: body.accessKeyId,
+            SecretAccessKey: body.secretAccessKey,
+            SessionToken: body.sessionToken,
+            Expiration: body.expiration
+        };
+    });
+}
+
+function buildPolicyResponse(policy) {
+    var auth = new sdk.Auth(kCredentials.ak, kCredentials.sk);
+    policy = new Buffer(policy).toString('base64');
+    signature = auth.hash(policy, kCredentials.sk);
+
+    return sdk.Q.resolve({
+        accessKey: kCredentials.ak,
+        policy: policy,
+        signature: signature
+    });
+}
+
+function buildNormalResponse(query) {
+    if (!(query.httpMethod && query.path && query.params && query.headers)) {
+        return sdk.Q.resolve({statusCode: 403});
+    }
+
+    if (query.httpMethod !== 'PUT' && query.httpMethod !== 'POST' && query.httpMethod !== 'GET') {
+        // 只允许 PUT/POST/GET Method
+        return sdk.Q.resolve({statusCode: 403});
+    }
+
+    var httpMethod = query.httpMethod;
+    var path = query.path;
+    var params = safeParse(query.params) || {};
+    var headers = safeParse(query.headers) || {};
+
+    var auth = new sdk.Auth(kCredentials.ak, kCredentials.sk);
+    signature = auth.generateAuthorization(httpMethod, path, params, headers);
+
+    return sdk.Q.resolve({
+        statusCode: 200,
+        signature: signature,
+        xbceDate: new Date().toISOString().replace(/\.\d+Z$/, 'Z')
+    });
+}
+
 http.createServer(function (req, res) {
     console.log(req.url);
 
-    // query: { httpMethod: '$0', path: '$1', params: '$2', headers: '$3' },
     var query = url.parse(req.url, true).query;
 
-    var statusCode = 200;
-    var policy = null;
-    var signature = null;
-
-    if (query.policy) {
-        var auth = new Auth(kCredentials.ak, kCredentials.sk);
-        policy = new Buffer(query.policy).toString('base64');
-        signature = auth.hash(policy, kCredentials.sk);
+    var promise = null;
+    if (query.sts) {
+        promise = buildStsResponse(query.sts);
     }
-    else if (query.httpMethod && query.path && query.params && query.headers) {
-        if (query.httpMethod !== 'PUT' && query.httpMethod !== 'POST' && query.httpMethod !== 'GET') {
-            // 只允许 PUT/POST/GET Method
-            statusCode = 403;
-        }
-        else {
-            var httpMethod = query.httpMethod;
-            var path = query.path;
-            var params = safeParse(query.params) || {};
-            var headers = safeParse(query.headers) || {};
-
-            var auth = new Auth(kCredentials.ak, kCredentials.sk);
-            signature = auth.generateAuthorization(httpMethod, path, params, headers);
-        }
+    else if (query.policy) {
+        promise = buildPolicyResponse(query.policy);
     }
     else {
-        statusCode = 403;
+        promise = buildNormalResponse(query);
     }
 
-    // 最多10s的延迟
-    var delay = Math.min(query.delay || 0, 10);
-    setTimeout(function () {
-        var payload = query.policy
-                      ? {
-                          accessKey: kCredentials.ak,
-                          policy: policy,
-                          signature: signature
-                      }
-                      : {
-                          statusCode: statusCode,
-                          signature: signature,
-                          xbceDate: new Date().toISOString().replace(/\.\d+Z$/, 'Z')
-                      };
-
-        res.writeHead(statusCode, {
+    promise.then(function (payload) {
+        res.writeHead(200, {
             'Content-Type': 'text/javascript; charset=utf-8',
             'Access-Control-Allow-Origin': '*'
         });
+
         if (query.callback) {
             res.end(util.format('%s(%s)', query.callback, JSON.stringify(payload)));
         }
         else {
             res.end(JSON.stringify(payload));
         }
-    }, delay * 1000);
+    });
 }).listen(1337);
 console.log('Server running at http://0.0.0.0:1337/');
-
-/* vim: set ts=4 sw=4 sts=4 tw=120: */

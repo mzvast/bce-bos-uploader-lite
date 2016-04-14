@@ -110,6 +110,19 @@ exports.normalizeEndpoint = function (endpoint) {
     return endpoint.replace(/(\/+)$/, '');
 };
 
+exports.getDefaultACL = function (bucket) {
+    return {
+        accessControlList: [
+            {
+                service: 'bce:bos',
+                region: '*',
+                effect: 'Allow',
+                resource: [bucket + '/*'],
+                permission: ['READ', 'WRITE']
+            }
+        ]
+    };
+};
 
 /**
  * 使用 PostObject 接口上传文件的时候，需要有默认的签名内容

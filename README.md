@@ -67,6 +67,7 @@ var uploader = new baidubce.bos.Uploader({
 |bos_ak|N|无|如果没有设置`uptoken_url`的话，必须有`ak`和`sk`这个配置才可以工作|
 |bos_sk|N|无|如果没有设置`uptoken_url`的话，必须有`ak`和`sk`这个配置才可以工作|
 |uptoken|N|无|sts token的内容|
+|get_new_uptoken|N|true|如果设置为false，会自动获取到Sts Token，上传的过程中可以减少一些请求|
 |auth_stripped_headers|N|['User-Agent', 'Connection']|如果计算签名的时候，需要剔除一些headers，可以配置这个参数|
 |multi_selection|N|false|是否可以选择多个文件|
 |dir_selection|N|false|是否允许选择目录(有些浏览器开启了这个选型之后，只能选择目录，无法选择文件)|
