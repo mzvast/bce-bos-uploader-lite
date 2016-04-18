@@ -101,6 +101,17 @@
     var __id = 0;
     var __isEmpty = true;
 
+    function noop() {
+    }
+
+    if (typeof localStorage === 'undefined') {
+      var localStorage = {
+        getItem: noop,
+        setItem: noop,
+        removeItem: noop
+      };
+    }
+
     function toUrl(object) {
       var url = 'http://bce-bos-uploader.bceimg.com/' + encodeURIComponent(object).replace(/%2F/gi, '/');
       return url;
@@ -229,11 +240,44 @@
           var url = toUrl(info.body.object);
           row.setStatus('ok-circle', true);
           row.setUrl(url);
+          localStorage.removeItem(file.__uploadId);
         },
         UploadComplete: function () {
           // TODO
         },
+        ListParts: function (_, file, uploadId) {
+          // 恢复断点续传的时候，从本地获取 parts 的信息，避免从服务读取
+          // 有时候服务器没有开放读取的权限
+          var parts = localStorage.getItem(uploadId);
+          if (parts) {
+            try {
+              return JSON.parse(parts);
+            }
+            catch (ex) {
+            }
+          }
+        },
         ChunkUploaded: function (_, file, result) {
+          var partNumber = result.partNumber;
+          var uploadId = result.uploadId;
+          var response = result.response;
+          var eTag = response.http_headers.etag;
+
+          file.__uploadId = uploadId;
+
+          var parts = localStorage.getItem(uploadId);
+          if (!parts) {
+            parts = [];
+          }
+          else {
+            parts = JSON.parse(parts);
+          }
+          parts.push({
+            partNumber: partNumber,
+            eTag: eTag
+          });
+
+          localStorage.setItem(uploadId, JSON.stringify(parts));
           console.log(result);
         },
         Error: function (_, error, file) {

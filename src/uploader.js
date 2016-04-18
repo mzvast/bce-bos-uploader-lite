@@ -88,6 +88,7 @@ var kDefaultOptions = {
 
 var kPostInit = 'PostInit';
 var kKey = 'Key';
+var kListParts = 'ListParts';
 
 // var kFilesRemoved   = 'FilesRemoved';
 var kFileFiltered = 'FileFiltered';
@@ -686,7 +687,7 @@ Uploader.prototype._initiateMultipartUpload = function (file, chunkSize, bucket,
                 return initNewMultipartUpload();
             }
 
-            return self.client.listParts(bucket, object, uploadId);
+            return self._listParts(bucket, object, uploadId);
         })
         .then(function (response) {
             if (uploadId && localSaveKey) {
@@ -705,6 +706,26 @@ Uploader.prototype._initiateMultipartUpload = function (file, chunkSize, bucket,
                 return initNewMultipartUpload();
             }
             throw error;
+        });
+};
+
+Uploader.prototype._listParts = function (bucket, object, uploadId) {
+    var self = this;
+    var localParts = this._invoke(kListParts, [this._currentFile, uploadId]);
+
+    return sdk.Q.resolve(localParts)
+        .then(function (parts) {
+            if (u.isArray(parts)) {
+                return {
+                    http_headers: {},
+                    body: {
+                        parts: parts
+                    }
+                };
+            }
+
+            // 如果返回的不是数组，就调用 listParts 接口从服务器获取数据
+            return self.client.listParts(bucket, object, uploadId);
         });
 };
 
@@ -737,6 +758,11 @@ Uploader.prototype._uploadPart = function (state) {
                 self._invoke(kUploadProgress, [self._currentFile, progress, null]);
 
                 var result = {
+                    uploadId: item.uploadId,
+                    partNumber: item.partNumber,
+                    partSize: item.partSize,
+                    bucket: item.bucket,
+                    object: item.object,
                     offset: item.start,
                     total: blob.size,
                     response: response

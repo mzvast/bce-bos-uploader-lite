@@ -85,10 +85,6 @@ exports.parseSize = function (size) {
     return +$1;
 };
 
-exports.isPromise = function (value) {
-    return (value && typeof value.then === 'function');
-};
-
 /**
  * 判断一下浏览器是否支持 xhr2 特性，如果不支持，就 fallback 到 PostObject
  * 来上传文件
