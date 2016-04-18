@@ -30,6 +30,10 @@ var kDefaultOptions = {
     // 默认的 ak 和 sk 配置
     bos_credentials: null,
 
+    // 如果切换到 appendable 模式，最大只支持 5G 的文件
+    // 不再支持 Multipart 的方式上传文件
+    bos_appendable: false,
+
     // 是否支持多选，默认（false）
     multi_selection: false,
 
@@ -497,10 +501,16 @@ Uploader.prototype._onUploadProgress = function (e) {
         : 0;
     // FIXME(leeight) 这种判断方法不太合适.
     if (this.client._httpAgent
-        && this.client._httpAgent._req
-        && this.client._httpAgent._req._headers) {
-        var headers = this.client._httpAgent._req._headers;
+        && this.client._httpAgent._req) {
+        var req = this.client._httpAgent._req;
+        var uri = req.uri;
 
+        if (/[\?&]append=&?/.test(uri)) {
+            // 这里就不要触发 kUploadProgress 了
+            return;
+        }
+
+        var headers = req._headers;
         var partNumber = headers['x-bce-meta-part-number'];
         if (partNumber != null) {
             this._invoke(kUploadPartProgress, [this._currentFile, progress, e]);
@@ -508,6 +518,7 @@ Uploader.prototype._onUploadProgress = function (e) {
         }
     }
 
+    // FIXME(leeight) 影响了 appendObjectFromBlob 的进度计算方式
     this._invoke(kUploadProgress, [this._currentFile, progress, e]);
 };
 
@@ -518,7 +529,7 @@ Uploader.prototype.start = function () {
 
     if (this._files.length) {
         this._working = true;
-        this._uploadNext(this._getNext());
+        this._uploadNext();
     }
 };
 
@@ -553,7 +564,7 @@ Uploader.prototype._guessContentType = function (file, opt_ignoreCharset) {
     return contentType;
 };
 
-Uploader.prototype._uploadNextViaMultipart = function (file) {
+Uploader.prototype._uploadNextViaMultipart = function (file, bucket, object) {
     var contentType = this._guessContentType(file);
     var options = {
         'Content-Type': contentType
@@ -564,21 +575,7 @@ Uploader.prototype._uploadNextViaMultipart = function (file) {
     var multipartParallel = this.options.bos_multipart_parallel;
     var chunkSize = this.options.chunk_size;
 
-    var bucket = this.options.bos_bucket;
-    var object = file.name;
-    var throwErrors = true;
-
-    return sdk.Q.resolve(this._invoke(kKey, [file], throwErrors))
-        .then(function (result) {
-            if (u.isString(result)) {
-                object = result;
-            }
-            else if (u.isObject(result)) {
-                bucket = result.bucket || bucket;
-                object = result.key || object;
-            }
-            return self._initiateMultipartUpload(file, chunkSize, bucket, object, options);
-        })
+    return this._initiateMultipartUpload(file, chunkSize, bucket, object, options)
         .then(function (response) {
             uploadId = response.body.uploadId;
             var parts = response.body.parts || [];
@@ -640,7 +637,7 @@ Uploader.prototype._uploadNextViaMultipart = function (file) {
         })
         .fin(function () {
             // 上传结束（成功/失败），开始下一个
-            return self._uploadNext(self._getNext());
+            return self._uploadNext();
         });
 };
 
@@ -803,36 +800,20 @@ Uploader.prototype._uploadPart = function (state) {
     };
 };
 
-Uploader.prototype._uploadNextViaPostObject = function (file) {
+Uploader.prototype._uploadNextViaPostObject = function (file, bucket, object) {
     var self = this;
     var options = this.options;
+    var url = options.bos_endpoint.replace(/^(https?:\/\/)/, '$1' + bucket + '.');
+    var fields = {
+        'Content-Type': self._guessContentType(file, true),
+        'key': object,
+        'policy': options.bos_policy_base64,
+        'signature': options.bos_policy_signature,
+        'accessKey': options.bos_ak,
+        'success-action-status': '201'
+    };
 
-    var bucket = options.bos_bucket;
-    var object = file.name;
-    var throwErrors = true;
-
-    return sdk.Q.resolve(this._invoke(kKey, [file], throwErrors))
-        .then(function (result) {
-            if (u.isString(result)) {
-                object = result;
-            }
-            else if (u.isObject(result)) {
-                bucket = result.bucket || bucket;
-                object = result.key || object;
-            }
-
-            var url = options.bos_endpoint.replace(/^(https?:\/\/)/, '$1' + bucket + '.');
-
-            var fields = {
-                'Content-Type': self._guessContentType(file, true),
-                'key': object,
-                'policy': options.bos_policy_base64,
-                'signature': options.bos_policy_signature,
-                'accessKey': options.bos_ak,
-                'success-action-status': '201'
-            };
-            return self._sendPostRequest(url, fields, file);
-        })
+    return this._sendPostRequest(url, fields, file)
         .then(function (response) {
             response.body.bucket = bucket;
             response.body.object = object;
@@ -843,7 +824,7 @@ Uploader.prototype._uploadNextViaPostObject = function (file) {
             self._invoke(kError, [error, file]);
         })
         .fin(function () {
-            return self._uploadNext(self._getNext());
+            return self._uploadNext();
         });
 };
 
@@ -868,7 +849,7 @@ Uploader.prototype._sendPostRequest = function (url, fields, file) {
     formData.append('file', file);
 
     var xhr = new mOxie.XMLHttpRequest();
-    xhr.responseType = 'text';
+    // xhr.responseType = 'text';
     xhr.onreadystatechange = function (e) {
         if (xhr.readyState === 4) {
             if (xhr.status === 200) {
@@ -896,17 +877,19 @@ Uploader.prototype._sendPostRequest = function (url, fields, file) {
     });
     xhr.open('POST', url, true);
     xhr.send(formData, {
-        required_caps: {
-            return_response_headers: true,
-            do_cors: true
-        }
+        swf_url: self.options.flash_swf_url,
+        // required_caps: {
+        //     return_response_headers: true,
+        //     do_cors: true
+        // }
     });
 
     return deferred.promise;
 };
 
 
-Uploader.prototype._uploadNext = function (file, opt_maxRetries) {
+Uploader.prototype._uploadNext = function (opt_maxRetries) {
+    var file = this._getNext();
     if (file == null || this._abort) {
         // 自动结束了 或者 人为结束了
         this._working = false;
@@ -916,37 +899,15 @@ Uploader.prototype._uploadNext = function (file, opt_maxRetries) {
 
     var returnValue = this._invoke(kBeforeUpload, [file]);
     if (returnValue === false) {
-        return this._uploadNext(this._getNext());
+        return this._uploadNext();
     }
 
     // 设置一下当前正在上传的文件，progress 事件需要用到
     this._currentFile = file;
 
-    // 判断一下应该采用何种方式来上传
-    if (!this._xhr2Supported) {
-        return this._uploadNextViaPostObject(file);
-    }
-
-    var multipartMinSize = this.options.bos_multipart_min_size;
-    if (file.size > multipartMinSize) {
-        return this._uploadNextViaMultipart(file);
-    }
-
-    return this._uploadNextViaPutObject(file);
-};
-
-Uploader.prototype._uploadNextViaPutObject = function (file, opt_maxRetries) {
-    var contentType = this._guessContentType(file);
-    var options = {
-        'Content-Type': contentType
-    };
-
     var self = this;
-    var maxRetries = opt_maxRetries == null
-        ? this.options.max_retries
-        : opt_maxRetries;
-
-    var bucket = this.options.bos_bucket;
+    var options = this.options;
+    var bucket = options.bos_bucket;
     var object = file.name;
     var throwErrors = true;
 
@@ -959,8 +920,136 @@ Uploader.prototype._uploadNextViaPutObject = function (file, opt_maxRetries) {
                 bucket = result.bucket || bucket;
                 object = result.key || object;
             }
-            return self.client.putObjectFromBlob(bucket, object, file, options);
+
+            if (options.bos_appendable === true) {
+                return self._uploadNextViaAppendObject(file, bucket, object);
+            }
+
+            // 判断一下应该采用何种方式来上传
+            if (!self._xhr2Supported) {
+                return self._uploadNextViaPostObject(file, bucket, object);
+            }
+
+            var multipartMinSize = options.bos_multipart_min_size;
+            if (file.size > multipartMinSize) {
+                return self._uploadNextViaMultipart(file, bucket, object);
+            }
+
+            return self._uploadNextViaPutObject(file, bucket, object);
+        });
+};
+
+Uploader.prototype._uploadNextViaAppendObject = function (file, bucket, object) {
+    // 调用 GetObjectMeta 接口获取 x-bce-next-append-offset 和 x-bce-object-type
+    // 如果 x-bce-object-type 不是 "Appendable"，那么就不支持断点续传了
+    var self = this;
+    var options = this.options;
+    var contentType = this._guessContentType(file);
+
+    return this.client.getObjectMetadata(bucket, object)
+        .catch(function (error) {
+            if (error.status_code === 404) {
+                // 文件不存在，可以上传一个新的了
+                return {
+                    http_headers: {
+                        'content-length': 0,
+                        'x-bce-next-append-offset': 0,
+                        'x-bce-object-type': 'Appendable'
+                    },
+                    body: {}
+                };
+            }
+
+            throw error;
         })
+        .then(function (response) {
+            var httpHeaders = response.http_headers;
+            var appendable = utils.isAppendable(httpHeaders);
+            if (!appendable) {
+                // Normal Object 不能切换为 Appendable Object
+                self._invoke(kUploadProgress, [file, 1, null]);
+                return self._uploadNext();
+            }
+
+            var contentLength = +(httpHeaders['content-length']);
+            if (contentLength >= file.size) {
+                // 服务端的文件不小于本地，就没必要上传了
+                self._invoke(kUploadProgress, [file, 1, null]);
+                return self._uploadNext();
+            }
+
+            // offset 和 content-length 应该是一样大小的吧？
+            var offset = +httpHeaders['x-bce-next-append-offset'];
+
+            // 上传进度
+            var progress = file.size <= 0 ? 0 : offset / file.size;
+            self._invoke(kUploadProgress, [file, progress, null]);
+
+            // 排除了 offset 之后，按照 chunk_size 切分文件
+            // XXX 一般来说，如果启用了 (bos_appendable)，就可以考虑把 chunk_size 设置为一个比较小的值
+            var chunkSize = options.chunk_size;
+            var tasks = utils.getAppendableTasks(file.size, offset, chunkSize);
+
+            var deferred = sdk.Q.defer();
+            async.mapLimit(tasks, 1,
+                function (item, callback) {
+                    var offset = item.start;
+                    var offsetArgument = offset > 0 ? offset : null;
+                    var blob = file.slice(offset, item.stop + 1);
+                    var resolve = function (response) {
+                        var progress = (item.stop + 1) / file.size;
+                        self._invoke(kUploadProgress, [file, progress, null]);
+                        callback(null, response);
+                    };
+                    var reject = function (error) {
+                        callback(error);
+                    };
+                    var options = {
+                        'Content-Type': contentType,
+                        'Content-Length': item.partSize
+                    };
+                    self.client.appendObjectFromBlob(bucket, object,
+                        blob, offsetArgument, options).then(resolve, reject);
+                },
+                function (err, results) {
+                    if (err) {
+                        deferred.reject(err);
+                    }
+                    else {
+                        deferred.resolve(results);
+                    }
+                });
+            return deferred.promise;
+        })
+        .then(function () {
+            var response = {
+                http_headers: {},
+                body: {
+                    bucket: bucket,
+                    object: object
+                }
+            };
+            self._invoke(kFileUploaded, [file, response]);
+            return self._uploadNext();
+        })
+        .catch(function (error) {
+            self._invoke(kError, [error, file]);
+            return self._uploadNext();
+        });
+};
+
+Uploader.prototype._uploadNextViaPutObject = function (file, bucket, object, opt_maxRetries) {
+    var contentType = this._guessContentType(file);
+    var options = {
+        'Content-Type': contentType
+    };
+
+    var self = this;
+    var maxRetries = opt_maxRetries == null
+        ? this.options.max_retries
+        : opt_maxRetries;
+
+    return this.client.putObjectFromBlob(bucket, object, file, options)
         .then(function (response) {
             if (file.size <= 0) {
                 // 如果文件大小为0，不会触发 xhr 的 progress 事件，因此
@@ -971,20 +1060,20 @@ Uploader.prototype._uploadNextViaPutObject = function (file, opt_maxRetries) {
             response.body.object = object;
             self._invoke(kFileUploaded, [file, response]);
             // 上传成功，开始下一个
-            return self._uploadNext(self._getNext());
+            return self._uploadNext();
         })
         .catch(function (error) {
             self._invoke(kError, [error, file]);
             if (error.status_code && error.code && error.request_id) {
                 // 应该是正常的错误（比如签名异常），这种情况就不要重试了
-                return self._uploadNext(self._getNext());
+                return self._uploadNext();
             }
             else if (maxRetries > 0) {
                 // 还有几乎重试
-                return self._uploadNextViaPutObject(file, maxRetries - 1);
+                return self._uploadNextViaPutObject(file, bucket, object, maxRetries - 1);
             }
             // 重试结束了，不管了，继续下一个文件的上传
-            return self._uploadNext(self._getNext());
+            return self._uploadNext();
         });
 };
 

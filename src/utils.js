@@ -57,6 +57,24 @@ exports.getTasks = function (file, uploadId, chunkSize, bucket, object) {
     return tasks;
 };
 
+exports.getAppendableTasks = function (fileSize, offset, chunkSize) {
+    var leftSize = fileSize - offset;
+    var tasks = [];
+
+    while (leftSize) {
+        var partSize = Math.min(leftSize, chunkSize);
+        tasks.push({
+            partSize: partSize,
+            start: offset,
+            stop: offset + partSize - 1
+        });
+
+        leftSize -= partSize;
+        offset += partSize;
+    }
+    return tasks;
+};
+
 exports.parseSize = function (size) {
     if (typeof size === 'number') {
         return size;
@@ -94,6 +112,10 @@ exports.parseSize = function (size) {
 exports.isXhr2Supported = function () {
     // https://github.com/Modernizr/Modernizr/blob/f839e2579da2c6331eaad922ae5cd691aac7ab62/feature-detects/network/xhr2.js
     return 'XMLHttpRequest' in window && 'withCredentials' in new XMLHttpRequest();
+};
+
+exports.isAppendable = function (headers) {
+    return headers['x-bce-object-type'] === 'Appendable';
 };
 
 /**

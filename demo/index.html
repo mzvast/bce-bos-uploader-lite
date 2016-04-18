@@ -161,6 +161,7 @@
       browse_button: '#file',
       multi_selection: true,
       bos_bucket: 'bce-bos-uploader',
+      bos_appendable: true,
       // bos_endpoint: 'http://bos.bj.baidubce.com////',
       // bos_ak: '070c62ecc9f74414a52f65212fb3e6ee',
       // bos_sk: '99e4bfe6dde04da18f235fbf647e4667',
@@ -171,7 +172,7 @@
       auto_start: false,
       max_retries: 2,
       max_file_size: '500mb',
-      chunk_size: '1m',
+      chunk_size: '32k',
       dir_selection: false,
       flash_swf_url: '../bower_components/moxie/bin/flash/Moxie.swf',
       accept: 'zip,rar,pdf,avi,mp3,png,jpg,jpeg,gif',
@@ -232,7 +233,7 @@
           setTimeout(function () {
               var key = year + '/' + month + '/' + day + '/' + file.name;
               deferred.resolve(key);
-          }, delay * 1000);
+          }, delay * 100);
           return deferred.promise;
         },
         FileUploaded: function (_, file, info) {
