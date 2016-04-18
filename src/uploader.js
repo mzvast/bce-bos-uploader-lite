@@ -505,7 +505,7 @@ Uploader.prototype._onUploadProgress = function (e) {
         var req = this.client._httpAgent._req;
         var uri = req.uri;
 
-        if (/[\?&]append=&?/.test(uri)) {
+        if (/[\?&]append=?&?/.test(uri)) {
             // 这里就不要触发 kUploadProgress 了
             return;
         }
@@ -518,7 +518,6 @@ Uploader.prototype._onUploadProgress = function (e) {
         }
     }
 
-    // FIXME(leeight) 影响了 appendObjectFromBlob 的进度计算方式
     this._invoke(kUploadProgress, [this._currentFile, progress, e]);
 };
 
