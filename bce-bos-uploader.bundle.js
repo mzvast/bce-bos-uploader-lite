@@ -35574,6 +35574,8 @@ exports.createContext = Script.createContext = function (context) {
  * @author leeight
  */
 
+var urlModule = require(175);
+var qsModule = require(150);
 var sdk = require(19);
 var u = require(174);
 var async = require(17);
@@ -35901,6 +35903,13 @@ Uploader.prototype._init = function () {
                         },
                         sessionToken: payload.SessionToken
                     });
+                    self.client.createSignature = function (_, httpMethod, path, params, headers) {
+                        var credentials = _ || this.config.credentials;
+                        return sdk.Q.fcall(function () {
+                            var auth = new sdk.Auth(credentials.ak, credentials.sk);
+                            return auth.generateAuthorization(httpMethod, path, params, headers);
+                        });
+                    };
                 }
                 self._initEvents();
                 self._invoke(kPostInit);
@@ -35917,11 +35926,11 @@ Uploader.prototype._init = function () {
             this.client.createSignature = this._getCustomizedSignature(options.uptoken_url);
         }
         else if (options.bos_credentials) {
-            this.client.createSignature = function (credentials, httpMethod, path, params, headers) {
-                var timestamp = 0;
+            this.client.createSignature = function (_, httpMethod, path, params, headers) {
+                var credentials = _ || this.config.credentials;
                 return sdk.Q.fcall(function () {
                     var auth = new sdk.Auth(credentials.ak, credentials.sk);
-                    return auth.generateAuthorization(httpMethod, path, params, headers, timestamp);
+                    return auth.generateAuthorization(httpMethod, path, params, headers);
                 });
             };
         }
@@ -36539,10 +36548,7 @@ Uploader.prototype._uploadNext = function (opt_maxRetries) {
         });
 };
 
-var foobar = false;
 Uploader.prototype._getObjectMetadata = function (bucket, object) {
-    var self = this;
-
     // 如果浏览器不支持 xhr2，那么就切换到 mOxie.XMLHttpRequest
     // 但是因为 mOxie.XMLHttpRequest 无法发送 HEAD 请求，无法获取 Response Headers，
     // 因此 getObjectMetadata实际上无法正常工作，因此我们需要：
@@ -36552,108 +36558,8 @@ Uploader.prototype._getObjectMetadata = function (bucket, object) {
     //    Host: relay.efe.tech
     //    Authorization: xxx
     if (!this._xhr2Supported && !u.isUndefined(mOxie) && u.isFunction(mOxie.XMLHttpRequest)
-        && !foobar) {
-        // 只初始化一次.
-        foobar = true;
-
-        var relayServer = utils.normalizeEndpoint(this.options.bos_relay_server);
-        this.client.sendHTTPRequest = function (httpMethod, resource, args, config) {
-            var xhr = new mOxie.XMLHttpRequest();
-            var endpoint = config.endpoint;
-            var uri = resource;
-            var xhrMethod = httpMethod;
-
-            if (httpMethod === 'HEAD') {
-                // 因为 Flash 的 URLRequest 只能发送 GET 和 POST 请求
-                // getObjectMeta需要用HEAD请求，但是 Flash 无法发起这种请求
-                // 所需需要用 relay 中转一下
-                // XXX 因为 bucket 不可能是 private，否则 crossdomain.xml 是无法读取的
-                // 所以这个接口请求的时候，可以不需要 authorization 字段
-                args.params.httpMethod = httpMethod;
-                // GET https://relay.efe.tech/bj.bcebos.com/v1/bucket/object?httpMethod=HEAD
-                uri = '/' + config.endpoint.replace(/https?:\/\//, '') + uri;
-                endpoint = relayServer;
-                xhrMethod = 'GET';
-            }
-            else {
-                // http://bos.bj.baidubce.com/v1/${bucket}/${object}
-                // http://${bucket}.bos.bj.baidubce.com/v1/${object}
-                var bucket = uri.replace(/(^\/v\d\/)([^\/]+\/)(.*)/, '$2').replace(/\//, '');
-                uri = uri.replace(/(^\/v\d\/)([^\/]+\/)(.*)/, '$1$3');
-                endpoint = endpoint.replace(/(https?:\/\/)/, '$1' + bucket + '.');
-
-                // Host, Content-Type, Content-Length
-                args.headers.host = endpoint.replace(/^https?:\/\//, '');
-
-                // x-bce-date 和 date 二选一，是必须的
-                args.headers['x-bce-date'] = new Date().toISOString().replace(/\.\d+Z$/, 'Z');
-            }
-
-            var deferred = sdk.Q.defer();
-
-            xhr.onload = function () {
-                if (xhr.status === 200) {
-                    if (httpMethod === 'HEAD') {
-                        deferred.resolve(JSON.parse(xhr.response));
-                    }
-                    else {
-                        // 应该没有这个分支
-                        deferred.resolve({http_headers: {}, body: {}});
-                    }
-                }
-                else {
-                    deferred.reject({
-                        status_code: xhr.status,
-                        message: ''
-                    });
-                }
-            };
-
-            xhr.onerror = function (error) {
-                deferred.reject(error);
-            };
-
-            var promise = httpMethod === 'HEAD'
-                          ? sdk.Q.resolve()
-                          : self.client.createSignature(self.client.config.credentials,
-                            httpMethod, uri, args.params, args.headers);
-            promise.then(function (authorization, xbceDate) {
-                if (authorization) {
-                    args.headers.authorization = authorization;
-                }
-
-                if (xbceDate) {
-                    args.headers['x-bce-date'] = xbceDate;
-                }
-
-                var qs = require(150).stringify(args.params);
-                if (qs) {
-                    uri += '?' + qs;
-                }
-                uri = endpoint + uri;
-
-                xhr.open(xhrMethod, uri, true);
-
-                for (var key in args.headers) {
-                    if (!args.headers.hasOwnProperty(key)
-                        || key === 'host') {
-                        continue;
-                    }
-                    var value = args.headers[key];
-                    xhr.setRequestHeader(key, value);
-                }
-
-                xhr.send(args.body, {
-                    runtime_order: 'flash',
-                    swf_url: self.options.flash_swf_url
-                });
-            })[
-            "catch"](function (error) {
-                deferred.reject(error);
-            });
-
-            return deferred.promise;
-        };
+        && !this.client.hasOwnProperty('sendHTTPRequest')) {
+        this.client.sendHTTPRequest = u.bind(this._customHTTPRequestHandler, this);
     }
 
     return this.client.getObjectMetadata(bucket, object)[
@@ -36672,6 +36578,128 @@ Uploader.prototype._getObjectMetadata = function (bucket, object) {
 
             throw error;
         });
+};
+
+Uploader.prototype._customHTTPRequestHandler = function (httpMethod, resource, args, config) {
+    var self = this;
+    var options = self.options;
+
+    var endpointHost = urlModule.parse(config.endpoint).host;
+    var endpointProtocol = urlModule.parse(config.endpoint).protocol;
+
+    // x-bce-date 和 Date 二选一，是必须的
+    // 但是 Flash 无法设置 Date，因此必须设置 x-bce-date
+    args.headers['x-bce-date'] = new Date().toISOString().replace(/\.\d+Z$/, 'Z');
+    args.headers.host = endpointHost;
+
+    var xhrUri;
+    var xhrMethod = httpMethod;
+    var xhrBody = args.body;
+    if (httpMethod === 'HEAD') {
+        // 因为 Flash 的 URLRequest 只能发送 GET 和 POST 请求
+        // getObjectMeta需要用HEAD请求，但是 Flash 无法发起这种请求
+        // 所需需要用 relay 中转一下
+        // XXX 因为 bucket 不可能是 private，否则 crossdomain.xml 是无法读取的
+        // 所以这个接口请求的时候，可以不需要 authorization 字段
+        var relayServer = utils.normalizeEndpoint(options.bos_relay_server);
+        xhrUri = relayServer + '/' + endpointHost + resource;
+
+        args.params.httpMethod = httpMethod;
+
+        xhrMethod = 'POST';
+
+        // 必须要有 BODY 才能是 POST，否则你设置了也没有
+        // 而且必须是 POST 才可以设置自定义的header，GET不行
+        xhrBody = 'hello=world';
+    }
+    else {
+        // http://bos.bj.baidubce.com/v1/${bucket}/${object}
+        // http://${bucket}.bos.bj.baidubce.com/v1/${object}
+        var chunks = ('\ufefe' + resource).split('/');
+        var bucket = chunks[2];
+        chunks.splice(0, 1);    // Remove \ufefe
+        chunks.splice(1, 1);    // Remove bucket
+
+        resource = '/' + chunks.join('/');
+
+        endpointHost = (bucket + '.' + endpointHost);
+        args.headers.host = endpointHost;
+
+        xhrUri = endpointProtocol + '//' + endpointHost + resource;
+    }
+
+    var deferred = sdk.Q.defer();
+
+    var xhr = new mOxie.XMLHttpRequest();
+
+    xhr.onload = function () {
+        if (xhr.status === 200) {
+            if (httpMethod === 'HEAD') {
+                deferred.resolve(JSON.parse(xhr.response));
+            }
+            else {
+                // 应该没有这个分支
+                deferred.resolve({http_headers: {}, body: {}});
+            }
+        }
+        else {
+            deferred.reject({
+                status_code: xhr.status,
+                message: ''
+            });
+        }
+    };
+
+    xhr.onerror = function (error) {
+        deferred.reject(error);
+    };
+
+    var promise = self.client.createSignature(null, httpMethod,
+        resource, args.params, args.headers);
+    promise.then(function (authorization, xbceDate) {
+        if (authorization) {
+            args.headers.authorization = authorization;
+        }
+
+        if (xbceDate) {
+            args.headers['x-bce-date'] = xbceDate;
+        }
+
+        var qs = qsModule.stringify(args.params);
+        if (qs) {
+            xhrUri += '?' + qs;
+        }
+
+        xhr.open(xhrMethod, xhrUri, true);
+
+        for (var key in args.headers) {
+            if (!args.headers.hasOwnProperty(key)
+                || key === 'host') {
+                continue;
+            }
+            var value = args.headers[key];
+            xhr.setRequestHeader(key, value);
+        }
+
+        /*
+        alert([
+            'xhrMethod=' + xhrMethod,
+            'xhrUri=' + xhrUri,
+            'headers=' + JSON.stringify(args.headers),
+            'params=' + JSON.stringify(args.params)
+        ].join('\n'));
+        */
+
+        xhr.send(xhrBody, {
+            runtime_order: 'flash',
+            swf_url: self.options.flash_swf_url
+        });
+    })[
+    "catch"](function (error) {
+        deferred.reject(error);
+    });
+
+    return deferred.promise;
 };
 
 Uploader.prototype._uploadNextViaAppendObject = function (file, bucket, object) {
@@ -36800,7 +36828,7 @@ Uploader.prototype._uploadNextViaPutObject = function (file, bucket, object, opt
 module.exports = Uploader;
 
 }).call(this,require(74).Buffer)
-},{"150":150,"17":17,"174":174,"180":180,"19":19,"74":74,"84":84}],180:[function(require,module,exports){
+},{"150":150,"17":17,"174":174,"175":175,"180":180,"19":19,"74":74,"84":84}],180:[function(require,module,exports){
 /**
  * Copyright (c) 2014 Baidu.com, Inc. All Rights Reserved
  *

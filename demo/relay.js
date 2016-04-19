@@ -20,6 +20,7 @@ var url = require('url');
 var path = require('path');
 var http = require('http');
 
+var u = require('underscore');
 var debug = require('debug')('proxy');
 
 debug('Listening on port 8964');
@@ -39,15 +40,15 @@ http.createServer(function (req, res) {
     // 其它的请求代理到 bos 的外网服务器上面
     var query = parsedUrl.query;
 
-    // 只允许 GET来模拟HEAD 请求
-    if (req.method !== 'GET' || query.httpMethod !== 'HEAD') {
+    // 只允许 POST 来模拟HEAD 请求
+    if (req.method !== 'POST' || query.httpMethod !== 'HEAD') {
         res.writeHead(403);
         res.end();
         return;
     }
 
     // 从 req.url 里面获取目标机器的地址
-    var targetHost = req.url.replace(/(^\/)([^\/]+)(\/.*)/, '$2');
+    var targetHost = req.url.split('/')[1];
     req.url = req.url.replace(/^\/[^\/]+/, '');
     debug('[%s] http://%s%s', req.method, targetHost, req.url);
 
@@ -60,7 +61,7 @@ http.createServer(function (req, res) {
         path: req.url,
         // 按照BOS所需要的 Request Method 来代理
         method: query.httpMethod,
-        headers: req.headers
+        headers: u.omit(req.headers, 'content-type', 'content-length')
     };
     debug('options = %j', options);
     var proxyReq = http.request(options, function (proxyRes) {
