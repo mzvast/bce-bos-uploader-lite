@@ -34,6 +34,11 @@ var kDefaultOptions = {
     // 不再支持 Multipart 的方式上传文件
     bos_appendable: false,
 
+    // 为了处理 Flash 不能发送 HEAD, DELETE 之类的请求，以及无法
+    // 获取 response headers 的问题，需要搞一个 relay 服务器，把数据
+    // 格式转化一下
+    bos_relay_server: 'https://relay.efe.tech',
+
     // 是否支持多选，默认（false）
     multi_selection: false,
 
@@ -70,6 +75,8 @@ var kDefaultOptions = {
 
     // 是否需要每次都去服务器计算签名
     get_new_uptoken: true,
+
+    bos_token_mode: null,
 
     // 低版本浏览器上传文件的时候，需要设置 policy，默认情况下
     // policy的内容只需要包含 expiration 和 conditions 即可
@@ -111,6 +118,13 @@ var kUploadResumeError = 'UploadResumeError'; // 尝试断点续传失败
 var kError = 'Error';
 var kUploadComplete = 'UploadComplete';
 
+// 预先定义几种签名的策略
+var TokenMode = {
+    DEFAULT: 'default',
+    STS: 'sts',
+    POLICY: 'policy'
+};
+
 /**
  * BCE BOS Uploader
  *
@@ -136,9 +150,13 @@ function Uploader(options) {
     this.options.chunk_size = this._resetChunkSize(
         utils.parseSize(this.options.chunk_size));
 
+    if (!this.options.bos_token_mode) {
+        this.options.bos_token_mode = this._guessTokenMode();
+    }
+
     var credentials = this.options.bos_credentials;
     if (!credentials && this.options.bos_ak && this.options.bos_sk) {
-        credentials = {
+        this.options.bos_credentials = {
             ak: this.options.bos_ak,
             sk: this.options.bos_sk
         };
@@ -149,16 +167,9 @@ function Uploader(options) {
      */
     this.client = new sdk.BosClient({
         endpoint: utils.normalizeEndpoint(this.options.bos_endpoint),
-        credentials: credentials,
+        credentials: this.options.bos_credentials,
         sessionToken: this.options.uptoken
     });
-
-    if (!credentials && this.options.uptoken_url) {
-        if (this.options.get_new_uptoken === true) {
-            // 服务端动态签名的方式.
-            this.client.createSignature = this._getCustomizedSignature(this.options.uptoken_url);
-        }
-    }
 
     /**
      * 需要等待上传的文件列表，每次上传的时候，从这里面删除
@@ -281,26 +292,28 @@ Uploader.prototype._init = function () {
     var accept = options.accept;
 
     var self = this;
-    if (!this._xhr2Supported) {
-        if (typeof mOxie !== 'undefined' && typeof mOxie.FileInput === 'function') {
-            // https://github.com/moxiecode/moxie/wiki/FileInput
-            // mOxie.FileInput 只支持
-            // [+]: browse_button, accept multiple, directory, file
-            // [x]: container, required_caps
-            var fileInput = new mOxie.FileInput({
-                runtime_order: 'flash,html4',
-                browse_button: $(options.browse_button).get(0),
-                swf_url: options.flash_swf_url,
-                accept: utils.expandAcceptToArray(accept),
-                multiple: options.multi_selection,
-                directory: options.dir_selection,
-                file: 'file'      // PostObject接口要求固定是 'file'
-            });
+    if (!this._xhr2Supported
+        && !u.isUndefined(mOxie)
+        && u.isFunction(mOxie.FileInput)) {
+        // https://github.com/moxiecode/moxie/wiki/FileInput
+        // mOxie.FileInput 只支持
+        // [+]: browse_button, accept multiple, directory, file
+        // [x]: container, required_caps
+        var fileInput = new mOxie.FileInput({
+            runtime_order: 'flash,html4',
+            browse_button: $(options.browse_button).get(0),
+            swf_url: options.flash_swf_url,
+            accept: utils.expandAcceptToArray(accept),
+            multiple: options.multi_selection,
+            directory: options.dir_selection,
+            file: 'file'      // PostObject接口要求固定是 'file'
+        });
 
-            fileInput.onchange = u.bind(this._onFilesAdded, this);
-            fileInput.init();
-        }
+        fileInput.onchange = u.bind(this._onFilesAdded, this);
+        fileInput.init();
+    }
 
+    if (options.bos_token_mode === TokenMode.POLICY) {
         this._initPolicySignature().then(function (payload) {
             if (payload) {
                 self.options.bos_policy_base64 = payload.policy;
@@ -314,7 +327,7 @@ Uploader.prototype._init = function () {
             self._invoke(kError, [error]);
         });
     }
-    else if (options.uptoken_url && options.get_new_uptoken === false) {
+    else if (options.bos_token_mode === TokenMode.STS) {
         // 切换到了 STS 的模式
         this._initStsToken()
             .then(function (payload) {
@@ -338,6 +351,20 @@ Uploader.prototype._init = function () {
             });
     }
     else {
+        if (!options.bos_credentials && options.uptoken_url
+            && options.get_new_uptoken === true) {
+            // 服务端动态签名的方式.
+            this.client.createSignature = this._getCustomizedSignature(options.uptoken_url);
+        }
+        else if (options.bos_credentials) {
+            this.client.createSignature = function (credentials, httpMethod, path, params, headers) {
+                var timestamp = 0;
+                return sdk.Q.fcall(function () {
+                    var auth = new sdk.Auth(credentials.ak, credentials.sk);
+                    return auth.generateAuthorization(httpMethod, path, params, headers, timestamp);
+                });
+            };
+        }
         this._initEvents();
         this._invoke(kPostInit);
     }
@@ -546,9 +573,26 @@ Uploader.prototype._getNext = function () {
     return this._files.shift();
 };
 
+Uploader.prototype._guessTokenMode = function () {
+    var options = this.options;
+    if (options.bos_token_mode) {
+        return options.bos_token_mode;
+    }
+
+    if (!this._xhr2Supported) {
+        return TokenMode.POLICY;
+    }
+
+    if (options.uptoken_url && options.get_new_uptoken === false) {
+        return TokenMode.STS;
+    }
+
+    return TokenMode.DEFAULT;
+};
+
 Uploader.prototype._guessContentType = function (file, opt_ignoreCharset) {
     var contentType = file.type;
-    if (!contentType) {
+    if (true || !contentType) {
         var object = file.name;
         var ext = object.split(/\./g).pop();
         contentType = sdk.MimeType.guess(ext);
@@ -853,7 +897,7 @@ Uploader.prototype._sendPostRequest = function (url, fields, file) {
         if (xhr.readyState === 4) {
             if (xhr.status === 200) {
                 deferred.resolve({
-                    http_headers: xhr.getAllResponseHeaders() || {},
+                    http_headers: {},
                     body: {}
                 });
             }
@@ -876,11 +920,8 @@ Uploader.prototype._sendPostRequest = function (url, fields, file) {
     });
     xhr.open('POST', url, true);
     xhr.send(formData, {
-        swf_url: self.options.flash_swf_url,
-        // required_caps: {
-        //     return_response_headers: true,
-        //     do_cors: true
-        // }
+        runtime_order: 'flash',
+        swf_url: self.options.flash_swf_url
     });
 
     return deferred.promise;
@@ -938,12 +979,122 @@ Uploader.prototype._uploadNext = function (opt_maxRetries) {
         });
 };
 
-Uploader.prototype._uploadNextViaAppendObject = function (file, bucket, object) {
-    // 调用 GetObjectMeta 接口获取 x-bce-next-append-offset 和 x-bce-object-type
-    // 如果 x-bce-object-type 不是 "Appendable"，那么就不支持断点续传了
+var foobar = false;
+Uploader.prototype._getObjectMetadata = function (bucket, object) {
     var self = this;
-    var options = this.options;
-    var contentType = this._guessContentType(file);
+
+    // 如果浏览器不支持 xhr2，那么就切换到 mOxie.XMLHttpRequest
+    // 但是因为 mOxie.XMLHttpRequest 无法发送 HEAD 请求，无法获取 Response Headers，
+    // 因此 getObjectMetadata实际上无法正常工作，因此我们需要：
+    // 1. 让 BOS 新增 REST API，在 GET 的请求的同时，把 x-bce-* 放到 Response Body 返回
+    // 2. 临时方案：新增一个 Relay 服务，实现方案 1
+    //    GET /bj.bcebos.com/v1/bucket/object?httpMethod=HEAD
+    //    Host: relay.efe.tech
+    //    Authorization: xxx
+    if (!this._xhr2Supported && !u.isUndefined(mOxie) && u.isFunction(mOxie.XMLHttpRequest)
+        && !foobar) {
+        // 只初始化一次.
+        foobar = true;
+
+        var relayServer = utils.normalizeEndpoint(this.options.bos_relay_server);
+        this.client.sendHTTPRequest = function (httpMethod, resource, args, config) {
+            var xhr = new mOxie.XMLHttpRequest();
+            var endpoint = config.endpoint;
+            var uri = resource;
+            var xhrMethod = httpMethod;
+
+            if (httpMethod === 'HEAD') {
+                // 因为 Flash 的 URLRequest 只能发送 GET 和 POST 请求
+                // getObjectMeta需要用HEAD请求，但是 Flash 无法发起这种请求
+                // 所需需要用 relay 中转一下
+                // XXX 因为 bucket 不可能是 private，否则 crossdomain.xml 是无法读取的
+                // 所以这个接口请求的时候，可以不需要 authorization 字段
+                args.params.httpMethod = httpMethod;
+                // GET https://relay.efe.tech/bj.bcebos.com/v1/bucket/object?httpMethod=HEAD
+                uri = '/' + config.endpoint.replace(/https?:\/\//, '') + uri;
+                endpoint = relayServer;
+                xhrMethod = 'GET';
+            }
+            else {
+                // http://bos.bj.baidubce.com/v1/${bucket}/${object}
+                // http://${bucket}.bos.bj.baidubce.com/v1/${object}
+                var bucket = uri.replace(/(^\/v\d\/)([^\/]+\/)(.*)/, '$2').replace(/\//, '');
+                uri = uri.replace(/(^\/v\d\/)([^\/]+\/)(.*)/, '$1$3');
+                endpoint = endpoint.replace(/(https?:\/\/)/, '$1' + bucket + '.');
+
+                // Host, Content-Type, Content-Length
+                args.headers.host = endpoint.replace(/^https?:\/\//, '');
+
+                // x-bce-date 和 date 二选一，是必须的
+                args.headers['x-bce-date'] = new Date().toISOString().replace(/\.\d+Z$/, 'Z');
+            }
+
+            var deferred = sdk.Q.defer();
+
+            xhr.onload = function () {
+                if (xhr.status === 200) {
+                    if (httpMethod === 'HEAD') {
+                        deferred.resolve(JSON.parse(xhr.response));
+                    }
+                    else {
+                        // 应该没有这个分支
+                        deferred.resolve({http_headers: {}, body: {}});
+                    }
+                }
+                else {
+                    deferred.reject({
+                        status_code: xhr.status,
+                        message: ''
+                    });
+                }
+            };
+
+            xhr.onerror = function (error) {
+                deferred.reject(error);
+            };
+
+            var promise = httpMethod === 'HEAD'
+                          ? sdk.Q.resolve()
+                          : self.client.createSignature(self.client.config.credentials,
+                            httpMethod, uri, args.params, args.headers);
+            promise.then(function (authorization, xbceDate) {
+                if (authorization) {
+                    args.headers.authorization = authorization;
+                }
+
+                if (xbceDate) {
+                    args.headers['x-bce-date'] = xbceDate;
+                }
+
+                var qs = require('querystring').stringify(args.params);
+                if (qs) {
+                    uri += '?' + qs;
+                }
+                uri = endpoint + uri;
+
+                xhr.open(xhrMethod, uri, true);
+
+                for (var key in args.headers) {
+                    if (!args.headers.hasOwnProperty(key)
+                        || key === 'host') {
+                        continue;
+                    }
+                    var value = args.headers[key];
+                    xhr.setRequestHeader(key, value);
+                }
+
+                xhr.send(args.body, {
+                    runtime_order: 'flash',
+                    swf_url: self.options.flash_swf_url
+                });
+            })
+            .catch(function (error) {
+                deferred.reject(error);
+            });
+
+            return deferred.promise;
+        };
+    }
 
     return this.client.getObjectMetadata(bucket, object)
         .catch(function (error) {
@@ -960,7 +1111,17 @@ Uploader.prototype._uploadNextViaAppendObject = function (file, bucket, object) 
             }
 
             throw error;
-        })
+        });
+};
+
+Uploader.prototype._uploadNextViaAppendObject = function (file, bucket, object) {
+    // 调用 getObjectMeta 接口获取 x-bce-next-append-offset 和 x-bce-object-type
+    // 如果 x-bce-object-type 不是 "Appendable"，那么就不支持断点续传了
+    var self = this;
+    var options = this.options;
+    var contentType = this._guessContentType(file);
+
+    this._getObjectMetadata(bucket, object)
         .then(function (response) {
             var httpHeaders = response.http_headers;
             var appendable = utils.isAppendable(httpHeaders);

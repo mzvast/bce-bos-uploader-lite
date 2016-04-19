@@ -98,6 +98,40 @@
       </div>
     </div>
     <script>
+    /*
+    var ak = 'b92ea4a39f3645c8ae5f64ba5fc2a357';
+    var sk = 'a4ce012968714958a21bb90dc180de17';
+    var auth = new baidubce.sdk.Auth(ak, sk);
+    var timestamp = 1461059427;
+    // var timestamp = ~~(new Date().getTime() / 1000);
+
+    var z1 = auth.generateAuthorization(
+        'POST',
+        '/v1/2016/04/19/1M.rar',
+        {append: ''},
+        {
+            'host': 'leeight.bos.bj.baidubce.com',
+            'x-bce-date': '2016-04-19T09:50:27Z',
+            'content-type': 'application/x-rar-compressed; charset=UTF-8',
+            'content-length': 65536
+        },
+        timestamp
+    );
+
+    var z2 = auth.generateAuthorization(
+        'POST',
+        '/v1/2016/04/19/1450229956_4a45288fb2153a7c7d782038d482e8a4.jpeg',
+        {append: ''},
+        {
+            host: 'leeight.bos.bj.baidubce.com',
+            'content-type': 'image/jpeg; charset=UTF-8',
+            'content-length': 65536
+        }
+    );
+    alert(z1);
+    //*/
+    </script>
+    <script>
     var __id = 0;
     var __isEmpty = true;
 
@@ -160,19 +194,23 @@
     var uploader = new baidubce.bos.Uploader({
       browse_button: '#file',
       multi_selection: true,
-      bos_bucket: 'bce-bos-uploader',
+      bos_bucket: 'leeight',
+      // bos_bucket: 'bce-bos-uploader',
       bos_appendable: true,
-      // bos_endpoint: 'http://bos.bj.baidubce.com////',
-      // bos_ak: '070c62ecc9f74414a52f65212fb3e6ee',
-      // bos_sk: '99e4bfe6dde04da18f235fbf647e4667',
+      // bos_endpoint: 'http://bos.bj.baidubce.com/',
+      // bos_ak: 'b92ea4a39f3645c8ae5f64ba5fc2a357',
+      // bos_sk: 'a4ce012968714958a21bb90dc180de17',
       // uptoken: 'MjUzZjQzNTY4OTE0NDRkNjg3N2E4YzJhZTc4YmU5ZDh8AAAAAAoCAAAmY7CAlLxYPiJEWNh+oj21qzqYAT13HypF3vHswny6IdVFq/RMFImzs58GLtuGSKRBR6o9U9ksH7sG5RED37pnEDDjL8kRFm9AnpfOjhRIklv5hACuA/mPEzgreWQSjAFktrY/XcACIL5J2pZ4nsRzV8pN9A4nbbfsH64t5WCyxyukEdw6HSxgsku272SLgu4BopARyVvnT9fGaMP704srZrm6Jb6CIC0CENTYtGN8mdE5yCAXDFMxSe3Ne70qnxZ4nT9xol8orrZucsHx3IL0IYoILW41bluL3X8Jt1DCHHg6ClY8UYq3bXI6f+IUzyLk/ZIuHytSnfqL10wu7o3O3gGLn/DqZQ8RV0+DDzBe2Qxrh4jU1OJ9LXU5v19E7uQeKnkKxPQibtJSAUp9uh86',
       uptoken_url: 'http://180.76.133.248:1337/ack',
       // uptoken_url: 'http://localhost.baidu.com:1337/ack',
-      get_new_uptoken: false,
+      bos_relay_server: 'http://localhost.baidu.com:8964',
+      // get_new_uptoken: false,
+      bos_token_mode: 'sts',
+      // bos_token_mode: 'sts',
       auto_start: false,
       max_retries: 2,
       max_file_size: '500mb',
-      chunk_size: '32k',
+      chunk_size: '1m',
       dir_selection: false,
       flash_swf_url: '../bower_components/moxie/bin/flash/Moxie.swf',
       accept: 'zip,rar,pdf,avi,mp3,png,jpg,jpeg,gif',
