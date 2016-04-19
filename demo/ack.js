@@ -51,7 +51,7 @@ function buildNormalResponse(query) {
         return sdk.Q.resolve({statusCode: 403});
     }
 
-    if (query.httpMethod !== 'PUT' && query.httpMethod !== 'POST' && query.httpMethod !== 'GET') {
+    if (query.httpMethod === 'DELETE') {
         // 只允许 PUT/POST/GET Method
         return sdk.Q.resolve({statusCode: 403});
     }
