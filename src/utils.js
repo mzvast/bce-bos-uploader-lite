@@ -143,31 +143,6 @@ exports.getDefaultACL = function (bucket) {
 };
 
 /**
- * 使用 PostObject 接口上传文件的时候，需要有默认的签名内容
- *
- * @param {string} bucket The bucket name.
- * @return {Object}
- */
-exports.getDefaultPolicy = function (bucket) {
-    if (bucket == null) {
-        return null;
-    }
-
-    var now = new Date().getTime();
-
-    // 默认是 24小时 之后到期
-    var expiration = new Date(now + 24 * 60 * 60 * 1000);
-    var utcDateTime = expiration.toISOString().replace(/\.\d+Z$/, 'Z');
-
-    return {
-        expiration: utcDateTime,
-        conditions: [
-            {bucket: bucket}
-        ]
-    };
-};
-
-/**
  * 生成uuid
  *
  * @return {string}

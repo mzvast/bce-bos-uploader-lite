@@ -80,21 +80,6 @@ var kDefaultOptions = {
 
     bos_token_mode: null,
 
-    // 低版本浏览器上传文件的时候，需要设置 policy，默认情况下
-    // policy的内容只需要包含 expiration 和 conditions 即可
-    // policy: {
-    //   expiration: 'xx',
-    //   conditions: [
-    //     {bucket: 'the-bucket-name'}
-    //   ]
-    // }
-    bos_policy: null,
-
-    // 低版本浏览器上传文件的时候，需要设置 policy_signature
-    // 如果没有设置 bos_policy_signature 的话，会通过 uptoken_url 来请求
-    // 默认只会请求一次，如果失效了，需要手动来重置 policy_signature
-    bos_policy_signature: null,
-
     // JSONP 默认的超时时间(5000ms)
     uptoken_jsonp_timeout: 5000
 };
@@ -123,8 +108,7 @@ var kUploadComplete = 'UploadComplete';
 // 预先定义几种签名的策略
 var TokenMode = {
     DEFAULT: 'default',
-    STS: 'sts',
-    POLICY: 'policy'
+    STS: 'sts'
 };
 
 /**
@@ -142,9 +126,7 @@ function Uploader(options) {
         }, $(options).data());
     }
 
-    var runtimeOptions = {
-        bos_policy: utils.getDefaultPolicy(options.bos_bucket)
-    };
+    var runtimeOptions = {};
     this.options = u.extend({}, kDefaultOptions, runtimeOptions, options);
     this.options.max_file_size = utils.parseSize(this.options.max_file_size);
     this.options.bos_multipart_min_size
@@ -315,21 +297,7 @@ Uploader.prototype._init = function () {
         fileInput.init();
     }
 
-    if (options.bos_token_mode === TokenMode.POLICY) {
-        this._initPolicySignature().then(function (payload) {
-            if (payload) {
-                self.options.bos_policy_base64 = payload.policy;
-                self.options.bos_policy_signature = payload.signature;
-                self.options.bos_ak = payload.accessKey;
-            }
-            self._invoke(kPostInit);
-        })
-        .catch(function (error) {
-            debug(error);
-            self._invoke(kError, [error]);
-        });
-    }
-    else if (options.bos_token_mode === TokenMode.STS) {
+    if (options.bos_token_mode === TokenMode.STS) {
         // 切换到了 STS 的模式
         this._initStsToken()
             .then(function (payload) {
@@ -403,6 +371,18 @@ Uploader.prototype._initEvents = function () {
     this.client.on('progress', u.bind(this._onUploadProgress, this));
     // XXX 必须绑定 error 的处理函数，否则会 throw new Error
     this.client.on('error', u.bind(this._onError, this));
+
+    if (!this._xhr2Supported) {
+        // 如果浏览器不支持 xhr2，那么就切换到 mOxie.XMLHttpRequest
+        // 但是因为 mOxie.XMLHttpRequest 无法发送 HEAD 请求，无法获取 Response Headers，
+        // 因此 getObjectMetadata实际上无法正常工作，因此我们需要：
+        // 1. 让 BOS 新增 REST API，在 GET 的请求的同时，把 x-bce-* 放到 Response Body 返回
+        // 2. 临时方案：新增一个 Relay 服务，实现方案 1
+        //    GET /bj.bcebos.com/v1/bucket/object?httpMethod=HEAD
+        //    Host: relay.efe.tech
+        //    Authorization: xxx
+        this.client.sendHTTPRequest = u.bind(this._customHTTPRequestHandler, this);
+    }
 };
 
 Uploader.prototype._initStsToken = function () {
@@ -427,62 +407,10 @@ Uploader.prototype._initStsToken = function () {
             deferred.resolve(payload);
         },
         error: function () {
-            deferred.reject(new Error('Get policy signature timeout (' + timeout + 'ms).'));
+            deferred.reject(new Error('Get sts token timeout (' + timeout + 'ms).'));
         }
     });
     return deferred.promise;
-};
-
-Uploader.prototype._initPolicySignature = function () {
-    var options = this.options;
-    var bos_policy = options.bos_policy;
-    var bos_policy_signature = options.bos_policy_signature;
-    var uptoken_url = options.uptoken_url;
-    var timeout = options.uptoken_jsonp_timeout;
-
-    if (!bos_policy) {
-        // 如果没有设置 bos_policy，莫非因为 bucket 是 public-read-write?
-        // 因为默认情况下 bos_policy 是有内容设置的，所以如果出现不存在的情况
-        // 肯定是使用者显式的设置成 null 了
-        return sdk.Q.resolve();
-    }
-
-    if (!bos_policy_signature) {
-        // 如果设置了 bos_policy 但是没有设置 bos_policy_signature
-        // 那么就动态的从后台请求一次
-        if (!uptoken_url) {
-            return sdk.Q.reject(new Error('In order to get policy signature, `uptoken_url` must be setted.'));
-        }
-
-        var deferred = sdk.Q.defer();
-        $.ajax({
-            url: uptoken_url,
-            jsonp: 'callback',
-            dataType: 'jsonp',
-            timeout: timeout,
-            data: {
-                policy: JSON.stringify(bos_policy)
-            },
-            success: function (payload) {
-                // payload.policy (base64)
-                // payload.signature
-                // payload.accessKey
-                deferred.resolve(payload);
-            },
-            error: function () {
-                deferred.reject(new Error('Get policy signature timeout (' + timeout + 'ms).'));
-            }
-        });
-        return deferred.promise;
-    }
-
-    // 不需要用户自己设置，主动计算一下就好了.
-    if (options.bos_policy_base64 == null) {
-        options.bos_policy_base64 = new Buffer(JSON.stringify(
-            bos_policy)).toString('base64');
-    }
-
-    return sdk.Q.resolve();
 };
 
 Uploader.prototype._filterFiles = function (candidates) {
@@ -535,8 +463,14 @@ Uploader.prototype._onUploadProgress = function (e) {
     var progress = e.lengthComputable
         ? e.loaded / e.total
         : 0;
+
     // FIXME(leeight) 这种判断方法不太合适.
-    if (this.client._httpAgent
+
+    var eventType = kUploadProgress;
+    if (e._partNumber != null) {
+        eventType = kUploadPartProgress;
+    }
+    else if (this.client._httpAgent
         && this.client._httpAgent._req) {
         var req = this.client._httpAgent._req;
         var uri = req.uri;
@@ -549,12 +483,11 @@ Uploader.prototype._onUploadProgress = function (e) {
         var headers = req._headers;
         var partNumber = headers['x-bce-meta-part-number'];
         if (partNumber != null) {
-            this._invoke(kUploadPartProgress, [this._currentFile, progress, e]);
-            return;
+            eventType = kUploadPartProgress;
         }
     }
 
-    this._invoke(kUploadProgress, [this._currentFile, progress, e]);
+    this._invoke(eventType, [this._currentFile, progress, e]);
 };
 
 Uploader.prototype.start = function () {
@@ -586,10 +519,6 @@ Uploader.prototype._guessTokenMode = function () {
     var options = this.options;
     if (options.bos_token_mode) {
         return options.bos_token_mode;
-    }
-
-    if (!this._xhr2Supported) {
-        return TokenMode.POLICY;
     }
 
     if (options.uptoken_url && options.get_new_uptoken === false) {
@@ -852,91 +781,6 @@ Uploader.prototype._uploadPart = function (state) {
     };
 };
 
-Uploader.prototype._uploadNextViaPostObject = function (file, bucket, object) {
-    var self = this;
-    var options = this.options;
-    var url = options.bos_endpoint.replace(/^(https?:\/\/)/, '$1' + bucket + '.');
-    var fields = {
-        'Content-Type': self._guessContentType(file, true),
-        'key': object,
-        'policy': options.bos_policy_base64,
-        'signature': options.bos_policy_signature,
-        'accessKey': options.bos_ak,
-        'success-action-status': '201'
-    };
-
-    return this._sendPostRequest(url, fields, file)
-        .then(function (response) {
-            response.body.bucket = bucket;
-            response.body.object = object;
-            self._invoke(kFileUploaded, [file, response]);
-        })
-        .catch(function (error) {
-            debug(error);
-            self._invoke(kError, [error, file]);
-        })
-        .fin(function () {
-            return self._uploadNext();
-        });
-};
-
-Uploader.prototype._sendPostRequest = function (url, fields, file) {
-    var self = this;
-    var deferred = sdk.Q.defer();
-
-    if (u.isUndefined(mOxie)
-        || !u.isFunction(mOxie.FormData)
-        || !u.isFunction(mOxie.XMLHttpRequest)) {
-        deferred.reject(new Error('mOxie is undefined.'));
-        return deferred.promise;
-    }
-
-    var formData = new mOxie.FormData();
-    u.each(fields, function (value, name) {
-        if (value == null) {
-            return;
-        }
-        formData.append(name, value);
-    });
-    formData.append('file', file);
-
-    var xhr = new mOxie.XMLHttpRequest();
-    // xhr.responseType = 'text';
-    xhr.onreadystatechange = function (e) {
-        if (xhr.readyState === 4) {
-            if (xhr.status === 200) {
-                deferred.resolve({
-                    http_headers: {},
-                    body: {}
-                });
-            }
-            else {
-                deferred.reject(new Error('Invalid response statusCode ' + xhr.status));
-            }
-        }
-    };
-    if (xhr.upload) {
-        xhr.upload.onprogress = function (e) {
-            var progress = e.loaded / e.total;
-            self._invoke(kUploadProgress, [file, progress, null]);
-        };
-    }
-    xhr.bind('error', function (e) {
-        deferred.reject(e);
-    });
-    xhr.bind('RuntimeError', function (e) {
-        deferred.reject(e);
-    });
-    xhr.open('POST', url, true);
-    xhr.send(formData, {
-        runtime_order: 'flash',
-        swf_url: self.options.flash_swf_url
-    });
-
-    return deferred.promise;
-};
-
-
 Uploader.prototype._uploadNext = function (opt_maxRetries) {
     var file = this._getNext();
     if (file == null || this._abort) {
@@ -974,11 +818,6 @@ Uploader.prototype._uploadNext = function (opt_maxRetries) {
                 return self._uploadNextViaAppendObject(file, bucket, object);
             }
 
-            // 判断一下应该采用何种方式来上传
-            if (!self._xhr2Supported) {
-                return self._uploadNextViaPostObject(file, bucket, object);
-            }
-
             var multipartMinSize = options.bos_multipart_min_size;
             if (file.size > multipartMinSize) {
                 return self._uploadNextViaMultipart(file, bucket, object);
@@ -989,19 +828,6 @@ Uploader.prototype._uploadNext = function (opt_maxRetries) {
 };
 
 Uploader.prototype._getObjectMetadata = function (bucket, object) {
-    // 如果浏览器不支持 xhr2，那么就切换到 mOxie.XMLHttpRequest
-    // 但是因为 mOxie.XMLHttpRequest 无法发送 HEAD 请求，无法获取 Response Headers，
-    // 因此 getObjectMetadata实际上无法正常工作，因此我们需要：
-    // 1. 让 BOS 新增 REST API，在 GET 的请求的同时，把 x-bce-* 放到 Response Body 返回
-    // 2. 临时方案：新增一个 Relay 服务，实现方案 1
-    //    GET /bj.bcebos.com/v1/bucket/object?httpMethod=HEAD
-    //    Host: relay.efe.tech
-    //    Authorization: xxx
-    if (!this._xhr2Supported && !u.isUndefined(mOxie) && u.isFunction(mOxie.XMLHttpRequest)
-        && !this.client.hasOwnProperty('sendHTTPRequest')) {
-        this.client.sendHTTPRequest = u.bind(this._customHTTPRequestHandler, this);
-    }
-
     return this.client.getObjectMetadata(bucket, object)
         .catch(function (error) {
             if (error.status_code === 404) {
@@ -1032,6 +858,14 @@ Uploader.prototype._customHTTPRequestHandler = function (httpMethod, resource, a
     args.headers['x-bce-date'] = new Date().toISOString().replace(/\.\d+Z$/, 'Z');
     args.headers.host = endpointHost;
 
+    // 只有 PUT 才会触发 progress 事件
+    var originalHttpMethod = httpMethod;
+
+    if (httpMethod === 'PUT') {
+        // PutObject PutParts 都可以用 POST 协议，而且 Flash 也只能用 POST 协议
+        httpMethod = 'POST';
+    }
+
     var xhrUri;
     var xhrMethod = httpMethod;
     var xhrBody = args.body;
@@ -1047,10 +881,6 @@ Uploader.prototype._customHTTPRequestHandler = function (httpMethod, resource, a
         args.params.httpMethod = httpMethod;
 
         xhrMethod = 'POST';
-
-        // 必须要有 BODY 才能是 POST，否则你设置了也没有
-        // 而且必须是 POST 才可以设置自定义的header，GET不行
-        xhrBody = 'hello=world';
     }
     else {
         // http://bos.bj.baidubce.com/v1/${bucket}/${object}
@@ -1068,24 +898,42 @@ Uploader.prototype._customHTTPRequestHandler = function (httpMethod, resource, a
         xhrUri = endpointProtocol + '//' + endpointHost + resource;
     }
 
+    if (xhrMethod === 'POST' && !xhrBody) {
+        // 必须要有 BODY 才能是 POST，否则你设置了也没有
+        // 而且必须是 POST 才可以设置自定义的header，GET不行
+        xhrBody = '{"FORCE_POST": true}';
+    }
+
     var deferred = sdk.Q.defer();
 
     var xhr = new mOxie.XMLHttpRequest();
 
     xhr.onload = function () {
-        if (xhr.status === 200) {
+        var response = null;
+        try {
+            response = JSON.parse(xhr.response || '{}');
+        }
+        catch (ex) {
+            response = {};
+        }
+
+        if (xhr.status >= 200 && xhr.status < 300) {
             if (httpMethod === 'HEAD') {
-                deferred.resolve(JSON.parse(xhr.response));
+                deferred.resolve(response);
             }
             else {
-                // 应该没有这个分支
-                deferred.resolve({http_headers: {}, body: {}});
+                deferred.resolve({
+                    http_headers: {},
+                    body: response
+                });
             }
         }
         else {
             deferred.reject({
                 status_code: xhr.status,
-                message: ''
+                message: response.message || '',
+                code: response.code || '',
+                request_id: response.requestId || ''
             });
         }
     };
@@ -1093,6 +941,21 @@ Uploader.prototype._customHTTPRequestHandler = function (httpMethod, resource, a
     xhr.onerror = function (error) {
         deferred.reject(error);
     };
+
+    if (xhr.upload) {
+        // FIXME(分片上传的逻辑和xxx的逻辑不一样)
+        xhr.upload.onprogress = function (e) {
+            if (originalHttpMethod === 'PUT') {
+                // POST, HEAD, GET 之类的不需要触发 progress 事件
+                // 否则导致页面的逻辑混乱
+                var partNumber = args.headers['x-bce-meta-part-number'];
+                e.lengthComputable = true;
+                e._partNumber = partNumber;
+
+                self.client.emit('progress', e);
+            }
+        };
+    }
 
     var promise = self.client.createSignature(null, httpMethod,
         resource, args.params, args.headers);
