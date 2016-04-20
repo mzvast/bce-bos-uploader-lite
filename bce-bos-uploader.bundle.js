@@ -36851,7 +36851,7 @@ exports.parseSize = function (size) {
     // mb MB Mb M
     // kb KB kb k
     // 100
-    var pattern = /^([\d\.]+)([mkg]b?)$/i;
+    var pattern = /^([\d\.]+)([mkg]?b?)$/i;
     var match = pattern.exec(size);
     if (!match) {
         return 0;
@@ -36866,7 +36866,7 @@ exports.parseSize = function (size) {
         return $1 * 1024 * 1024;
     }
     else if (/^g/i.test($2)) {
-        return $1 * 1024 * 1024;
+        return $1 * 1024 * 1024 * 1024;
     }
     return +$1;
 };

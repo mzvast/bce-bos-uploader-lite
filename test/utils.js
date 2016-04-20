@@ -19,6 +19,19 @@ var expect = require('expect.js');
 var utils = require('../src/utils');
 
 describe('utils', function () {
+    it('parseSize', function () {
+        expect(utils.parseSize(1024)).to.eql(1024);
+        expect(utils.parseSize('1024b')).to.eql(1024);
+        expect(utils.parseSize('1024')).to.eql(1024);
+        expect(utils.parseSize('1024k')).to.eql(1024 * 1024);
+        expect(utils.parseSize('1024m')).to.eql(1024 * 1024 * 1024);
+        expect(utils.parseSize('1g')).to.eql(1024 * 1024 * 1024);
+        expect(utils.parseSize('1024B')).to.eql(1024);
+        expect(utils.parseSize('1024Kb')).to.eql(1024 * 1024);
+        expect(utils.parseSize('1024Mb')).to.eql(1024 * 1024 * 1024);
+        expect(utils.parseSize('1Gb')).to.eql(1024 * 1024 * 1024);
+    });
+
     it('getAppendableTasks', function () {
         var fileSize = 100;
         var offset = 96;
