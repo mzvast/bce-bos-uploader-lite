@@ -98,40 +98,6 @@
       </div>
     </div>
     <script>
-    /*
-    var ak = 'b92ea4a39f3645c8ae5f64ba5fc2a357';
-    var sk = 'a4ce012968714958a21bb90dc180de17';
-    var auth = new baidubce.sdk.Auth(ak, sk);
-    var timestamp = 1461059427;
-    // var timestamp = ~~(new Date().getTime() / 1000);
-
-    var z1 = auth.generateAuthorization(
-        'POST',
-        '/v1/2016/04/19/1M.rar',
-        {append: ''},
-        {
-            'host': 'leeight.bos.bj.baidubce.com',
-            'x-bce-date': '2016-04-19T09:50:27Z',
-            'content-type': 'application/x-rar-compressed; charset=UTF-8',
-            'content-length': 65536
-        },
-        timestamp
-    );
-
-    var z2 = auth.generateAuthorization(
-        'POST',
-        '/v1/2016/04/19/1450229956_4a45288fb2153a7c7d782038d482e8a4.jpeg',
-        {append: ''},
-        {
-            host: 'leeight.bos.bj.baidubce.com',
-            'content-type': 'image/jpeg; charset=UTF-8',
-            'content-length': 65536
-        }
-    );
-    alert(z1);
-    //*/
-    </script>
-    <script>
     var __id = 0;
     var __isEmpty = true;
 
@@ -194,8 +160,7 @@
     var uploader = new baidubce.bos.Uploader({
       browse_button: '#file',
       multi_selection: true,
-      bos_bucket: 'leeight',
-      // bos_bucket: 'bce-bos-uploader',
+      bos_bucket: 'bce-bos-uploader',
       // bos_appendable: true,
       // bos_endpoint: 'http://bos.bj.baidubce.com/',
       // bos_ak: 'b92ea4a39f3645c8ae5f64ba5fc2a357',

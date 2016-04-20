@@ -590,6 +590,33 @@ Uploader.prototype._uploadNextViaMultipart = function (file, bucket, object) {
             return deferred.promise;
         })
         .then(function (responses) {
+            // 因为mOxie的限制，无法获取 Response Headers 的 ETag，因此
+            // 这里调用一下 listParts 的接口
+            if (!self._xhr2Supported) {
+                // 如果分片超过了1000个，实际上是存在问题的
+                return self._listAllParts(bucket, object, uploadId)
+                    .then(function (payload) {
+                        var parts = payload.body.parts;
+                        var eTagMap = {};
+                        for (var i = 0; i < parts.length; i ++) {
+                            var part = parts[i];
+                            var partNumber = part.partNumber;
+                            var eTag = part.eTag;
+                            eTagMap[partNumber] = eTag;
+                        }
+                        for (var i = 0; i < responses.length; i ++) {
+                            var item = responses[i];
+                            var eTag = eTagMap['' + (i + 1)];
+                            if (eTag) {
+                                item.http_headers.etag = eTag;
+                            }
+                        };
+                        return responses;
+                    });
+            }
+            return responses;
+        })
+        .then(function (responses) {
             var partList = [];
             u.each(responses, function (response, index) {
                 partList.push({
@@ -703,8 +730,56 @@ Uploader.prototype._listParts = function (bucket, object, uploadId) {
             }
 
             // 如果返回的不是数组，就调用 listParts 接口从服务器获取数据
-            return self.client.listParts(bucket, object, uploadId);
+            return self._listAllParts(bucket, object, uploadId);
         });
+};
+
+/**
+ * @param {string} bucket The bucket name.
+ * @param {string} object The object name.
+ * @param {string} uploadId The multipart upload id.
+ */
+Uploader.prototype._listAllParts = function (bucket, object, uploadId) {
+    // isTruncated === true / false
+    var self = this;
+    var deferred = sdk.Q.defer();
+
+    var parts = [];
+    var payload = null;
+    var maxParts = 1000;          // 每次的分页
+    var partNumberMarker = 0;     // 分隔符
+
+    function listParts() {
+        var options = {
+            maxParts: maxParts,
+            partNumberMarker: partNumberMarker
+        };
+        self.client.listParts(bucket, object, uploadId, options)
+            .then(function (response) {
+                if (payload == null) {
+                    payload = response;
+                }
+
+                parts.push.apply(parts, response.body.parts);
+                partNumberMarker = response.body.nextPartNumberMarker;
+
+                if (response.body.isTruncated === false) {
+                    // 结束了
+                    payload.body.parts = parts;
+                    deferred.resolve(payload);
+                }
+                else {
+                    // 递归调用
+                    listParts();
+                }
+            })
+            .catch(function (error) {
+                deferred.reject(error);
+            });
+    };
+    listParts();
+
+    return deferred.promise;
 };
 
 Uploader.prototype._uploadPart = function (state) {
