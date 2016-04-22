@@ -12,76 +12,53 @@
  */
 
 function toUrl(object) {
-  var url = 'http://bj.bcebos.com/vod-gauddsywyhn713kc/' + encodeURIComponent(object).replace(/%2F/gi, '/');
+  var url = [
+    BOS_ENDPOINT,
+    BOS_BUCKET,
+    encodeURIComponent(object).replace(/%2F/gi, '/')
+  ].join('/');
   return url;
 }
 
-var AK = getQuery('ak', 'f1a2705d3cf8448cb917684c4f40ac1f');
-var SK = getQuery('sk', '5fd876eb57834c2f8156d8e65890d0fd');
-var DOC_ENDPOINT = getQuery('doc.endpoint', 'http://doc.bce-testinternal.baidu.com');
-var CHUNK_SIZE = '1m';
+var AK = getQuery('ak', 'afe4759592064eee930682e399249aba');
+var SK = getQuery('sk', '7785ea912b06449f8cbd084998a1e400');
+var VOD_ENDPOINT = getQuery('vod.endpoint', 'http://vod.baidubce.com');
+var BOS_ENDPOINT = getQuery('bos.endpoint', 'http://bos.bj.baidubce.com');
+var BOS_BUCKET = getQuery('bos.bucket', 'vod-gauddsywyhn713kc');
 
-var doc = new baidubce.sdk.DocClient.Document({
-  endpoint: DOC_ENDPOINT,
+var CHUNK_SIZE = '5m';
+
+var vod = new baidubce.sdk.VodClient({
+  endpoint: VOD_ENDPOINT,
   credentials: {ak: AK, sk: SK}
 });
 
-function getDocKey(file) {
+function getVodKey(file) {
   var localKey = [AK, file.name, file.size, CHUNK_SIZE].join('&');
   var localValue = localStorage.getItem(localKey);
   if (!localValue) {
-    // return baidubce.utils.md5sum(file)
-    return baidubce.sdk.Q.resolve('deedb8a3acd52223f6dcd7d526e9e650')
-      .then(function (md5) {
-        var options = {
-          meta: {
-            sizeInBytes: file.size,
-            md5: md5,
-          },
-          title: file.name,
-          format: file.name.split('.').pop()
-        };
-        return doc.register(options)
-      })
-      .then(function (response) {
-        var documentId = response.body.documentId;
-        var bucket = response.body.bucket;
-        var key = response.body.object;
-        var bosEndpoint = response.body.bosEndpoint;
-
-        uploader.client.config.endpoint = bosEndpoint;
-        file.__documentId = documentId;
-        file.__bucket = bucket;
-        file.__object = key;
-
-        localStorage.setItem(localKey, JSON.stringify(response.body));
-
-        return {
-          bucket: bucket,
-          key: key
-        }
-      })['catch'](function (error) {
-        uploader._invoke('Error', [error, uploader._currentFile]);
-        uploader._uploadNext();
-        throw error;
-      });
+    return vod.buildRequest('POST', null, 'apply').then(function (response) {
+      var mediaId = response.body.mediaId;
+      var bucket = response.body.sourceBucket;
+      var key = response.body.sourceKey;
+      localStorage.setItem(localKey, JSON.stringify(response.body));
+      file.__mediaId = mediaId;
+      return {
+        bucket: bucket,
+        key: key
+      };
+    })['catch'](function (error) {
+      uploader._invoke('Error', [error, uploader._currentFile]);
+      uploader._uploadNext();
+      throw error;
+    });
   }
   else {
     localValue = JSON.parse(localValue);
-
-    var documentId = localValue.documentId;
-    var bosEndpoint = localValue.bosEndpoint;
-    var bucket = localValue.bucket;
-    var key = localValue.object;
-
-    uploader.client.config.endpoint = bosEndpoint;
-    file.__documentId = documentId;
-    file.__bucket = bucket;
-    file.__object = key;
-
+    file.__mediaId = localValue.mediaId;
     return {
-      bucket: bucket,
-      key: key
+      bucket: localValue.sourceBucket,
+      key: localValue.sourceKey
     };
   }
 }
@@ -89,11 +66,13 @@ function getDocKey(file) {
 var uploader = new baidubce.bos.Uploader({
   browse_button: '#file',
   multi_selection: true,
+  bos_bucket: BOS_BUCKET,
+  bos_endpoint: BOS_ENDPOINT,
   bos_ak: AK,
   bos_sk: SK,
   auto_start: false,
   max_retries: 2,
-  max_file_size: '100m',
+  max_file_size: '1Gb',
   bos_multipart_min_size: '10m',
   bos_multipart_parallel: 1,
   chunk_size: CHUNK_SIZE,
@@ -109,6 +88,10 @@ var uploader = new baidubce.bos.Uploader({
     BeforeUpload: function (_, file) {
       file.__startTime = new Date().getTime();
       var row = getRowById(file.__id);
+      if (/\.(pdf)$/i.test(file.name)) {
+        row.setIgnore(true);
+        return false;
+      }
       row.setStatus('circle-arrow-up');
     },
     UploadProgress: function (_, file, progress, event) {
@@ -116,7 +99,7 @@ var uploader = new baidubce.bos.Uploader({
       row.setProgress(progress);
     },
     Key: function (_, file) {
-      return getDocKey(file);
+      return getVodKey(file);
     },
     FileUploaded: function (_, file, info) {
       var time = ((new Date().getTime() - file.__startTime) / 1000).toFixed(2);
@@ -129,12 +112,10 @@ var uploader = new baidubce.bos.Uploader({
       var localKey = [AK, file.name, file.size, CHUNK_SIZE].join('&');
       localStorage.removeItem(localKey);
 
-      doc.publish(file.__documentId)
-        .then(function () {
-          row.setDocumentId(file.__documentId);
-        })['catch'](function (error) {
-          row.setDocumentId(String(error));
-        });
+      vod._internalCreateMediaResource(file.__mediaId, file.name, '测试文件')
+          .then(function () {
+              row.setMediaId(file.__mediaId);
+          });
     },
     UploadComplete: function () {
       // TODO
@@ -151,6 +132,10 @@ var uploader = new baidubce.bos.Uploader({
     },
     ChunkUploaded: function (_, file, result) {
       console.log(JSON.stringify(result));
+    },
+    UploadPause: function (_, file) {
+      var row = getRowById(file.__id);
+      row.setStatus('pause', true);
     },
     Error: function (_, error, file) {
       var row = getRowById(file.__id);
