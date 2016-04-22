@@ -32,6 +32,48 @@ describe('utils', function () {
         expect(utils.parseSize('1Gb')).to.eql(1024 * 1024 * 1024);
     });
 
+    it('transformUrl', function () {
+        expect(utils.transformUrl('http://bj.bcebos.com/v1/${bucket}/${object}'))
+            .to.eql('http://${bucket}.bj.bcebos.com/v1/${object}');
+        expect(utils.transformUrl('https://bj.bcebos.com/v1/${bucket}/${object}?uploads='))
+            .to.eql('https://${bucket}.bj.bcebos.com/v1/${object}?uploads=');
+
+        expect(utils.transformUrl('http://gz.bcebos.com/v1/${bucket}/${ogzect}'))
+            .to.eql('http://${bucket}.gz.bcebos.com/v1/${ogzect}');
+        expect(utils.transformUrl('https://gz.bcebos.com/v1/${bucket}/${ogzect}?uploads='))
+            .to.eql('https://${bucket}.gz.bcebos.com/v1/${ogzect}?uploads=');
+
+        expect(utils.transformUrl('http://hk.bcebos.com/v1/${bucket}/${ohkect}'))
+            .to.eql('http://${bucket}.hk.bcebos.com/v1/${ohkect}');
+        expect(utils.transformUrl('https://hk.bcebos.com/v1/${bucket}/${ohkect}?uploads='))
+            .to.eql('https://${bucket}.hk.bcebos.com/v1/${ohkect}?uploads=');
+
+        expect(utils.transformUrl('http://bj.bcebos.com/v2/${bucket}/${object}'))
+            .to.eql('http://${bucket}.bj.bcebos.com/v2/${object}');
+        expect(utils.transformUrl('https://bj.bcebos.com/v2/${bucket}/${object}?uploads='))
+            .to.eql('https://${bucket}.bj.bcebos.com/v2/${object}?uploads=');
+
+        expect(utils.transformUrl('http://bj.bcebos.com/${bucket}/${object}'))
+            .to.eql('http://${bucket}.bj.bcebos.com/${object}');
+        expect(utils.transformUrl('https://bj.bcebos.com/${bucket}/${object}?uploads='))
+            .to.eql('https://${bucket}.bj.bcebos.com/${object}?uploads=');
+
+        expect(utils.transformUrl('http://bos.bj.baidubce.com/v1/${bucket}/${object}'))
+            .to.eql('http://${bucket}.bos.bj.baidubce.com/v1/${object}');
+        expect(utils.transformUrl('https://bos.bj.baidubce.com/v1/${bucket}/${object}?uploads='))
+            .to.eql('https://${bucket}.bos.bj.baidubce.com/v1/${object}?uploads=');
+
+        expect(utils.transformUrl('http://bos.bj.baidubce.com/v2/${bucket}/${object}'))
+            .to.eql('http://${bucket}.bos.bj.baidubce.com/v2/${object}');
+        expect(utils.transformUrl('https://bos.bj.baidubce.com/v2/${bucket}/${object}?uploads='))
+            .to.eql('https://${bucket}.bos.bj.baidubce.com/v2/${object}?uploads=');
+
+        expect(utils.transformUrl('http://bos.bj.baidubce.com/${bucket}/${object}'))
+            .to.eql('http://${bucket}.bos.bj.baidubce.com/${object}');
+        expect(utils.transformUrl('https://bos.bj.baidubce.com/${bucket}/${object}?uploads='))
+            .to.eql('https://${bucket}.bos.bj.baidubce.com/${object}?uploads=');
+    });
+
     it('getAppendableTasks', function () {
         var fileSize = 100;
         var offset = 96;
