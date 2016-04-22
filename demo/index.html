@@ -7,7 +7,7 @@
     <link rel="stylesheet" type="text/css" href="../bower_components/bootstrap/dist/css/bootstrap.min.css" />
     <!--[if lt IE 8]><script src="../bower_components/json3/lib/json3.min.js"></script><![endif]-->
     <!--[if lt IE 9]><script src="../bower_components/js-polyfills/es5.js"></script><![endif]-->
-    <!--[if lt IE 10]><script src="../bower_components/moxie/bin/js/moxie.js"></script><![endif]-->
+    <!--[if lt IE 10]><script src="../bower_components/moxie/bin/js/moxie.min.js"></script><![endif]-->
     <script src="../bower_components/jquery/dist/jquery.js"></script>
     <script src="../bower_components/humanize/humanize.js"></script>
     <script src="../bce-bos-uploader.bundle.js"></script>
@@ -100,7 +100,7 @@
       </div>
     </div>
     <script>
-    var __id = 0;
+    var __uuid = 0;
     var __isEmpty = true;
 
     function toUrl(object) {
@@ -109,7 +109,7 @@
     }
 
     function getIdByName(name) {
-      return 'f' + (__id ++);
+      return 'f' + (__uuid ++);
     }
 
     function getRowById(rowId) {
@@ -155,23 +155,11 @@
     var uploader = new baidubce.bos.Uploader({
       browse_button: '#file',
       multi_selection: true,
-      // bos_bucket: 'bce-bos-uploader',
-      bos_bucket: 'vod-gauddsywyhn713kc',
-      bos_ak: 'afe4759592064eee930682e399249aba',
-      bos_sk: '7785ea912b06449f8cbd084998a1e400',
-      // uptoken_url: 'http://180.76.133.248:1337/ack',
-      // get_new_uptoken: false,
-      // bos_token_mode: 'sts',
-      auto_start: false,
-      max_retries: 2,
+      bos_bucket: 'bce-bos-uploader',
+      uptoken_url: 'http://180.76.133.248:1337/ack',
+      get_new_uptoken: false,
       max_file_size: '1Gb',
-      bos_multipart_min_size: '10m',
-      bos_multipart_parallel: 1,
-      chunk_size: '1m',
-      dir_selection: false,
       flash_swf_url: '../bower_components/moxie/bin/flash/Moxie.swf',
-      // accept: 'zip,rar,pdf,avi,mp3,png,jpg,jpeg,gif',
-      // bos_multipart_local_key_generator: 'md5',
       init: {
         FilesFilter: function (_, files) {
           // 添加更多的过滤规则，比如文件大小之类的
@@ -182,7 +170,7 @@
             var id = getIdByName(file.name);
             file.__id = id;
             var html = '<tr id="' + id + '">'
-                       + '<td class="f-id">' + (__id) + '</td>'
+                       + '<td class="f-id">' + (__uuid) + '</td>'
                        + '<td class="f-status"><span class="glyphicon glyphicon-record"></span></td>'
                        + '<td class="f-progress">0.00%</td>'
                        + '<td class="f-size">' + (humanize.filesize(file.size)) + '</td>'
