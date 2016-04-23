@@ -5,8 +5,10 @@ var util = require('util');
 var sdk = require('bce-sdk-js');
 
 var kCredentials = {
-    ak: 'b92ea4a39f3645c8ae5f64ba5fc2a357',
-    sk: 'a4ce012968714958a21bb90dc180de17'
+    // ak: 'b92ea4a39f3645c8ae5f64ba5fc2a357',
+    // sk: 'a4ce012968714958a21bb90dc180de17'
+    ak: '724c9abc6cd9403daece9d4d17c3e31b',
+    sk: 'a3ce5284f0d844c2b2deb52e4b785002'
 };
 
 function safeParse(text) {
@@ -47,7 +49,7 @@ function buildPolicyResponse(policy) {
 }
 
 function buildNormalResponse(query) {
-    if (!(query.httpMethod && query.path && query.params && query.headers)) {
+    if (!(query.httpMethod && query.path && query.queries && query.headers)) {
         return sdk.Q.resolve({statusCode: 403});
     }
 
@@ -58,16 +60,18 @@ function buildNormalResponse(query) {
 
     var httpMethod = query.httpMethod;
     var path = query.path;
-    var params = safeParse(query.params) || {};
+    var queries = safeParse(query.queries) || {};
     var headers = safeParse(query.headers) || {};
 
     var auth = new sdk.Auth(kCredentials.ak, kCredentials.sk);
-    signature = auth.generateAuthorization(httpMethod, path, params, headers);
+    var xbceDate = new Date(2016, 3, 23, 10, 30, 30);
+    var timestamp = xbceDate.getTime() / 1000;
+    signature = auth.generateAuthorization(httpMethod, path, queries, headers, timestamp);
 
     return sdk.Q.resolve({
         statusCode: 200,
         signature: signature,
-        xbceDate: new Date().toISOString().replace(/\.\d+Z$/, 'Z')
+        xbceDate: xbceDate.toISOString().replace(/\.\d+Z$/, 'Z')
     });
 }
 
