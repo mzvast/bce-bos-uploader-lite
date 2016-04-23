@@ -69,6 +69,7 @@
                 <input type="file" id="file" />
               </span>
               <button type="submit" class="btn btn-success" disabled>开始上传</button>
+              <span class="network-speed"></span>
             </div>
           </form>
           <br />
@@ -180,11 +181,11 @@
             if (__isEmpty) {
               __isEmpty = false;
               $('table tbody').html(html);
-              $('button[type=submit]').attr('disabled', false);
             }
             else {
               $('table tbody').append(html);
             }
+            $('button[type=submit]').attr('disabled', false);
           }
         },
         BeforeUpload: function (_, file) {
@@ -230,8 +231,23 @@
           row.setTime(time);
           localStorage.removeItem(file.__uploadId);
         },
+        NetworkSpeed: function (_, bytes, time, pendings) {
+          var speed = bytes / (time / 1000);
+          var html = '上传速度：' + humanize.filesize(speed) + '/s';
+          var seconds = pendings / speed;
+          if (seconds > 1) {
+            var dhms = baidubce.utils.toDHMS(~~seconds);
+            html += '，剩余时间：' + [
+              humanize.pad(dhms.HH, 2, '0'),
+              humanize.pad(dhms.MM, 2, '0'),
+              humanize.pad(dhms.SS, 2, '0')
+            ].join(':');
+          }
+
+          $('.network-speed').html(html);
+        },
         UploadComplete: function () {
-          // TODO
+          $('button[type=submit]').attr('disabled', true);
         },
         ListParts: function (_, file, uploadId) {
           // 恢复断点续传的时候，从本地获取 parts 的信息，避免从服务读取

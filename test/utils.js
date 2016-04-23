@@ -74,6 +74,16 @@ describe('utils', function () {
             .to.eql('https://${bucket}.bos.bj.baidubce.com/${object}?uploads=');
     });
 
+    it('toDHMS', function () {
+        expect(utils.toDHMS(59)).to.eql({DD: 0, HH: 0, MM: 0, SS: 59});
+        expect(utils.toDHMS(60)).to.eql({DD: 0, HH: 0, MM: 1, SS: 0});
+        expect(utils.toDHMS(61)).to.eql({DD: 0, HH: 0, MM: 1, SS: 1});
+        expect(utils.toDHMS(60 * 60 - 1)).to.eql({DD: 0, HH: 0, MM: 59, SS: 59});
+        expect(utils.toDHMS(60 * 60 + 1)).to.eql({DD: 0, HH: 1, MM: 0, SS: 1});
+        expect(utils.toDHMS(24 * 60 * 60 - 1)).to.eql({DD: 0, HH: 23, MM: 59, SS: 59});
+        expect(utils.toDHMS(24 * 60 * 60 + 1)).to.eql({DD: 1, HH: 0, MM: 0, SS: 1});
+    });
+
     it('getAppendableTasks', function () {
         var fileSize = 100;
         var offset = 96;
