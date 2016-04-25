@@ -19,6 +19,8 @@ var expect = require('expect.js');
 var utils = require('../src/utils');
 
 describe('utils', function () {
+    this.timeout(10 * 60 * 1000);
+
     it('parseSize', function () {
         expect(utils.parseSize(1024)).to.eql(1024);
         expect(utils.parseSize('1024b')).to.eql(1024);
@@ -102,6 +104,64 @@ describe('utils', function () {
                 stop: 99
             }
         ]);
+    });
+
+    it('eachLimit aborted', function (done) {
+        var tasks = [1, 3, 2, 4, 6, 5, 7, 8];
+        var taskParallel = 3;
+        var totalCount = 0;
+        var executedTasks = [];
+
+        var executer = function (task, callback) {
+            totalCount++;
+            executedTasks.push(task);
+            if (task === 6) {
+                callback(6);
+                return;
+            }
+            setTimeout(callback, task * 1000);
+        };
+
+        return utils.eachLimit(tasks, taskParallel, executer, function (error) {
+            expect(error).to.eql(6);
+            expect(totalCount).to.eql(5);
+            expect(executedTasks).to.eql([1, 3, 2, 4, 6]);
+            done();
+        });
+
+    });
+
+    it('eachLimit', function (done) {
+        var tasks = [1, 3, 2, 4, 6, 5, 7, 8];
+        var taskParallel = 3;
+        var totalCount = 0;
+        var executedTasks = [];
+
+        var executer = function (task, callback) {
+            totalCount++;
+            executedTasks.push(task);
+            setTimeout(callback, task * 1000);
+        };
+
+        setTimeout(function () {
+            tasks.push(6);
+            tasks.push(4);
+        }, 3000);
+
+        return utils.eachLimit(tasks, taskParallel, executer, function (error) {
+            if (error) {
+                expect().fail(error);
+            }
+            else {
+                expect(totalCount).to.eql(10);
+                expect(executedTasks).to.eql([
+                    1, 3, 2,
+                    4, 6, 5,
+                    7, 8, 6, 4
+                ]);
+            }
+            done();
+        });
     });
 });
 
