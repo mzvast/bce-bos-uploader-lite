@@ -1066,39 +1066,41 @@ Uploader.prototype._uploadNext = function (file) {
     var bucket = options.bos_bucket;
     var object = file.name;
     var throwErrors = true;
-    var multipart = 'auto';
 
-    return sdk.Q.resolve(this._invoke(kKey, [file], throwErrors))
-        .then(function (result) {
-            if (u.isString(result)) {
-                object = result;
-            }
-            else if (u.isObject(result)) {
-                bucket = result.bucket || bucket;
-                object = result.key || object;
+    return sdk.Q.all([
+        this._invoke(kKey, [file], throwErrors),
+        this._invoke(kObjectMetas, [file])
+    ]).then(function (array) {
+        var result = array[0];
+        var objectMetas = array[1];
 
-                // 'auto' / 'off'
-                multipart = result.multipart || multipart;
-            }
+        var multipart = 'auto';
+        if (u.isString(result)) {
+            object = result;
+        }
+        else if (u.isObject(result)) {
+            bucket = result.bucket || bucket;
+            object = result.key || object;
 
-            if (!self._xhr2Supported) {
-                return self._uploadNextViaPostObject(file, bucket, object);
-            }
+            // 'auto' / 'off'
+            multipart = result.multipart || multipart;
+        }
 
-            return sdk.Q.resolve(self._invoke(kObjectMetas, [file]));
-        })
-        .then(function (objectMetas) {
-            if (options.bos_appendable === true) {
-                return self._uploadNextViaAppendObject(file, bucket, object, objectMetas);
-            }
+        if (!self._xhr2Supported) {
+            return self._uploadNextViaPostObject(file, bucket, object);
+        }
 
-            var multipartMinSize = options.bos_multipart_min_size;
-            if (multipart === 'auto' && file.size > multipartMinSize) {
-                return self._uploadNextViaMultipart(file, bucket, object, objectMetas);
-            }
+        if (options.bos_appendable === true) {
+            return self._uploadNextViaAppendObject(file, bucket, object, objectMetas);
+        }
 
-            return self._uploadNextViaPutObject(file, bucket, object, objectMetas);
-        });
+        var multipartMinSize = options.bos_multipart_min_size;
+        if (multipart === 'auto' && file.size > multipartMinSize) {
+            return self._uploadNextViaMultipart(file, bucket, object, objectMetas);
+        }
+
+        return self._uploadNextViaPutObject(file, bucket, object, objectMetas);
+    });
 };
 
 Uploader.prototype._getObjectMetadata = function (bucket, object) {
