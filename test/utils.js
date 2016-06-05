@@ -106,6 +106,48 @@ describe('utils', function () {
         ]);
     });
 
+    it('inherits', function () {
+        function Parent() {
+            this.name = 'parent';
+        }
+        Parent.prototype.say = function () {
+            return this.name;
+        };
+
+        function Child() {
+            Parent.apply(this, arguments);
+            this.name = 'child';
+        }
+        utils.inherits(Child, Parent);
+
+        var p = new Parent();
+        expect(p.say()).to.eql('parent');
+
+        var c = new Child();
+        expect(c.say()).to.eql('child');
+    });
+
+    it('guessContentType', () => {
+        var file = {
+            type: 'text/html',
+            name: 'a.exe'
+        };
+        expect(utils.guessContentType(file)).to.eql('text/html; charset=UTF-8');
+        expect(utils.guessContentType(file, true)).to.eql('text/html');
+
+        var file2 = {
+            name: 'a.txt'
+        };
+        expect(utils.guessContentType(file2)).to.eql('text/plain; charset=UTF-8');
+        expect(utils.guessContentType(file2, true)).to.eql('text/plain');
+
+        var file3 = {
+            name: 'thename'
+        };
+        expect(utils.guessContentType(file3)).to.eql('application/octet-stream; charset=UTF-8');
+        expect(utils.guessContentType(file3, true)).to.eql('application/octet-stream');
+    });
+
     it('eachLimit aborted', function (done) {
         var tasks = [1, 3, 2, 4, 6, 5, 7, 8];
         var taskParallel = 3;

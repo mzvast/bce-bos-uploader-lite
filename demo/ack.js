@@ -7,8 +7,11 @@ var sdk = require('bce-sdk-js');
 var kCredentials = {
     // ak: 'b92ea4a39f3645c8ae5f64ba5fc2a357',
     // sk: 'a4ce012968714958a21bb90dc180de17'
-    ak: '724c9abc6cd9403daece9d4d17c3e31b',
-    sk: 'a3ce5284f0d844c2b2deb52e4b785002'
+    ak: 'd0d4f217d2a4414ca63361a53dbe74a9',
+    sk: 'f80754a0412b4e0c9d7a12acf1b417d9',
+
+    // ak: '724c9abc6cd9403daece9d4d17c3e31b',
+    // sk: 'a3ce5284f0d844c2b2deb52e4b785002'
 };
 
 function safeParse(text) {
@@ -64,7 +67,7 @@ function buildNormalResponse(query) {
     var headers = safeParse(query.headers) || {};
 
     var auth = new sdk.Auth(kCredentials.ak, kCredentials.sk);
-    var xbceDate = new Date(2016, 3, 23, 10, 30, 30);
+    var xbceDate = new Date();
     var timestamp = xbceDate.getTime() / 1000;
     signature = auth.generateAuthorization(httpMethod, path, queries, headers, timestamp);
 
