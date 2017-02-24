@@ -318,10 +318,10 @@ Uploader.prototype._initEvents = function () {
         sdk.DocClient.Document.prototype.sendHTTPRequest = utils.fixXhr(this.options);
         sdk.VodClient.prototype.sendHTTPRequest = utils.fixXhr(this.options);
         if (typeof sdk.VodClient.Media === 'function') {
-          sdk.VodClient.Media.prototype.sendHTTPRequest = utils.fixXhr(this.options);
+            sdk.VodClient.Media.prototype.sendHTTPRequest = utils.fixXhr(this.options);
         }
         if (typeof sdk.VodClient.Player === 'function') {
-          sdk.VodClient.Player.prototype.sendHTTPRequest = utils.fixXhr(this.options);
+            sdk.VodClient.Player.prototype.sendHTTPRequest = utils.fixXhr(this.options);
         }
     }
 };
