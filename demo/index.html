@@ -242,7 +242,8 @@
           var bucket = 'bce-bos-uploader';
           var sts = JSON.stringify(baidubce.utils.getDefaultACL(bucket));
 
-          return $.ajax({
+          var deferred = baidubce.sdk.Q.defer();
+          $.ajax({
             url: kUptokenUrl,
             dataType: 'json',
             data: {sts: sts, filename: file.name}
@@ -251,12 +252,12 @@
               bos_ak: payload.AccessKeyId,
               bos_sk: payload.SecretAccessKey,
               uptoken: payload.SessionToken,
-              bos_bucket: kBucket,
               bos_endpoint: kBosEndpoint
             });
             var key = year + '/' + month + '/' + day + '/' + file.name;
-            return key;
+            deferred.resolve({key: key, bucket: kBucket});
           });
+          return deferred.promise;
 
           // return uploader.refreshStsToken().then(function () {
           //   var key = year + '/' + month + '/' + day + '/' + file.name;
