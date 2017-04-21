@@ -167,19 +167,24 @@
       }
     }
 
+    var kBucket = 'bce-bos-uploader';
+    var kUptokenUrl = 'http://localhost.baidu.com:8801/ack.php';
+    var kBosEndpoint = 'http://bj.bcebos.com';
     var uploader = new baidubce.bos.Uploader({
       browse_button: '#file',
       multi_selection: true,
-      bos_bucket: 'bce-bos-uploader',
-      uptoken_url: 'http://localhost.baidu.com:8801/ack',
-      bos_endpoint: 'http://bj.bcebos.com',
-      get_new_uptoken: false,
+      // bos_bucket: kBucket,
+      // uptoken_via_jsonp: false,
+      // uptoken_url: kUptokenUrl,
+      // bos_endpoint: kBosEndpoint,
+      // get_new_uptoken: false,
       max_file_size: '1Gb',
       bos_multipart_min_size: '10Mb',
-      bos_task_parallel: 1,
+      bos_task_parallel: 2,
       bos_multipart_parallel: 5,
       chunk_size: '8mb',
       max_retries: 2,
+      // accept: 'mp4,flv,avi,asf,wmv,mov,webm,mpeg4,ts,mpg,rm,rmvb,mkv',
       // accept: 'image/*,video/*',
       // bos_appendable: true,
       flash_swf_url: '../bower_components/moxie/bin/flash/Moxie.swf',
@@ -238,13 +243,33 @@
             day = '0' + day;
           }
 
-          var deferred = baidubce.sdk.Q.defer();
-          var delay = ~~(2 + Math.random() * 5);    // (2, 7);
-          setTimeout(function () {
-              var key = year + '/' + month + '/' + day + '/' + file.name;
-              deferred.resolve(key);
-          }, delay * 100);
-          return deferred.promise;
+          var bucket = 'bce-bos-uploader';
+          var sts = JSON.stringify(baidubce.utils.getDefaultACL(bucket));
+
+          return $.ajax({
+            url: kUptokenUrl,
+            dataType: 'json',
+            data: {
+              sts: sts,
+              filename: file.name
+            }
+          }).done(function (payload) {
+            uploader.setOptions({
+              bos_ak: payload.AccessKeyId,
+              bos_sk: payload.SecretAccessKey,
+              uptoken: payload.SessionToken,
+              bos_bucket: kBucket,
+              bos_endpoint: kBosEndpoint
+            });
+            var key = year + '/' + month + '/' + day + '/' + file.name;
+            return key;
+          });
+
+
+          return uploader.refreshStsToken().then(function () {
+            var key = year + '/' + month + '/' + day + '/' + file.name;
+            return key;
+          });
         },
         FileUploaded: function (_, file, info) {
           var time = ((new Date().getTime() - file.__startTime) / 1000).toFixed(2);
