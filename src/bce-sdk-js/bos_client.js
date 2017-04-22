@@ -326,7 +326,7 @@ BosClient.prototype._prepareObjectHeaders = function (options) {
         throw new TypeError('Metadata size should not be greater than ' + MAX_USER_METADATA_SIZE + '.');
     }
 
-    if (u.has(headers, H.CONTENT_LENGTH)) {
+    if (headers.hasOwnProperty(H.CONTENT_LENGTH)) {
         var contentLength = headers[H.CONTENT_LENGTH];
         if (contentLength < 0) {
             throw new TypeError('content_length should not be negative.');
@@ -337,14 +337,14 @@ BosClient.prototype._prepareObjectHeaders = function (options) {
         }
     }
 
-    if (u.has(headers, 'ETag')) {
+    if (headers.hasOwnProperty('ETag')) {
         var etag = headers.ETag;
         if (!/^"/.test(etag)) {
             headers.ETag = util.format('"%s"', etag);
         }
     }
 
-    if (!u.has(headers, H.CONTENT_TYPE)) {
+    if (!headers.hasOwnProperty(H.CONTENT_TYPE)) {
         headers[H.CONTENT_TYPE] = 'application/octet-stream';
     }
 
