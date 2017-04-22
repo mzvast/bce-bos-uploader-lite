@@ -16,8 +16,41 @@ function map(array, callback, context) {
     return result;
 }
 
+function foreach(array, callback, context) {
+    for (var i = 0; i < array.length; i++) {
+        callback.call(context, array[i], i, array);
+    }
+}
+
+var hasOwnProperty = Object.prototype.hasOwnProperty;
+var hasDontEnumBug = !({toString: null}).propertyIsEnumerable('toString');
+var dontEnums = ['toString', 'toLocaleString', 'valueOf', 'hasOwnProperty',
+    'isPrototypeOf', 'propertyIsEnumerable', 'constructor'];
+
+function keys(obj) {
+    var result = [];
+    var prop;
+    var i;
+
+    for (prop in obj) {
+        if (hasOwnProperty.call(obj, prop)) {
+            result.push(prop);
+        }
+    }
+
+    if (hasDontEnumBug) {
+        for (i = 0; i < dontEnums.length; i++) {
+            if (hasOwnProperty.call(obj, dontEnums[i])) {
+                result.push(dontEnums[i]);
+            }
+        }
+    }
+
+    return result;
+}
+
 exports.bind = require('lodash.bind');
-exports.each = require('lodash.foreach');
+exports.each = foreach;
 exports.extend = require('lodash.assign');
 exports.filter = require('lodash.filter');
 exports.find = require('lodash.find');
@@ -32,7 +65,7 @@ exports.pick = require('lodash.pick');
 exports.reduce = require('lodash.reduce');
 exports.some = require('lodash.some');
 exports.uniq = require('lodash.uniq');
-exports.keys = require('lodash.keys');
+exports.keys = keys;
 exports.noop = noop;
 
 
