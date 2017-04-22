@@ -14,10 +14,15 @@
  * @author leeight
  */
 
-var sdk = require('bce-sdk-js');
-
+var Q = require('./vendor/q');
 var utils = require('./utils');
 
+/**
+ * StsTokenManager
+ *
+ * @class
+ * @param {Object} options The options.
+ */
 function StsTokenManager(options) {
     this.options = options;
 
@@ -31,7 +36,7 @@ StsTokenManager.prototype.get = function (bucket) {
         return self._cache[bucket];
     }
 
-    return sdk.Q.resolve(this._getImpl.apply(this, arguments)).then(function (payload) {
+    return Q.resolve(this._getImpl.apply(this, arguments)).then(function (payload) {
         self._cache[bucket] = payload;
         return payload;
     });
@@ -43,7 +48,7 @@ StsTokenManager.prototype._getImpl = function (bucket) {
     var timeout = options.uptoken_timeout || options.uptoken_jsonp_timeout;
     var viaJsonp = options.uptoken_via_jsonp;
 
-    var deferred = sdk.Q.defer();
+    var deferred = Q.defer();
     $.ajax({
         url: uptoken_url,
         jsonp: viaJsonp ? 'callback' : false,

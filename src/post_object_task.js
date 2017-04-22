@@ -14,13 +14,17 @@
  * @author leeight
  */
 
-var u = require('underscore');
-var sdk = require('bce-sdk-js');
-
+var Q = require('./vendor/q');
+var u = require('./vendor/underscore');
 var utils = require('./utils');
 var events = require('./events');
 var Task = require('./task');
 
+/**
+ * PostObjectTask
+ *
+ * @class
+ */
 function PostObjectTask() {
     Task.apply(this, arguments);
 
@@ -34,7 +38,7 @@ PostObjectTask.prototype.setPolicyManager = function (policyManager) {
 
 PostObjectTask.prototype.start = function (opt_maxRetries) {
     if (this.aborted) {
-        return sdk.Q.resolve();
+        return Q.resolve();
     }
 
     var self = this;
@@ -80,12 +84,12 @@ PostObjectTask.prototype._sendPostRequest = function (url, fields, file) {
     var self = this;
     var dispatcher = this.eventDispatcher;
 
-    var deferred = sdk.Q.defer();
+    var deferred = Q.defer();
 
     if (typeof mOxie === 'undefined'
         || !u.isFunction(mOxie.FormData)
         || !u.isFunction(mOxie.XMLHttpRequest)) {
-        return sdk.Q.reject(new Error('mOxie is undefined.'));
+        return Q.reject(new Error('mOxie is undefined.'));
     }
 
     var formData = new mOxie.FormData();

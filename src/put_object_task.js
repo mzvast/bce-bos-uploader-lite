@@ -14,13 +14,17 @@
  * @author leeight
  */
 
-var u = require('underscore');
-var sdk = require('bce-sdk-js');
-
+var Q = require('./vendor/q');
+var u = require('./vendor/underscore');
 var utils = require('./utils');
 var events = require('./events');
 var Task = require('./task');
 
+/**
+ * PutObjectTask
+ *
+ * @class
+ */
 function PutObjectTask() {
     Task.apply(this, arguments);
 }
@@ -28,7 +32,7 @@ utils.inherits(PutObjectTask, Task);
 
 PutObjectTask.prototype.start = function (opt_maxRetries) {
     if (this.aborted) {
-        return sdk.Q.resolve();
+        return Q.resolve();
     }
 
     var self = this;
@@ -62,7 +66,7 @@ PutObjectTask.prototype.start = function (opt_maxRetries) {
 
         if (error.status_code && error.code && error.request_id) {
             // 应该是正常的错误(比如签名异常)，这种情况就不要重试了
-            return sdk.Q.resolve();
+            return Q.resolve();
         }
         // else if (error.status_code === 0) {
         //    // 可能是断网了，safari 触发 online/offline 延迟比较久
@@ -76,7 +80,7 @@ PutObjectTask.prototype.start = function (opt_maxRetries) {
         }
 
         // 重试结束了，不管了，继续下一个文件的上传
-        return sdk.Q.resolve();
+        return Q.resolve();
     });
 };
 

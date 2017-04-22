@@ -10,40 +10,32 @@
  * an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the License for the
  * specific language governing permissions and limitations under the License.
  *
- * @file src/queue.js
+ * @file strings.js
  * @author leeight
  */
 
-/**
- * Queue
- *
- * @class
- * @param {*} collection The collection.
- */
-function Queue(collection) {
-    this.collection = collection;
-}
-
-Queue.prototype.isEmpty = function () {
-    return this.collection.length <= 0;
+var kEscapedMap = {
+    '!': '%21',
+    '\'': '%27',
+    '(': '%28',
+    ')': '%29',
+    '*': '%2A'
 };
 
-Queue.prototype.size = function () {
-    return this.collection.length;
+exports.normalize = function (string, encodingSlash) {
+    var result = encodeURIComponent(string);
+    result = result.replace(/[!'\(\)\*]/g, function ($1) {
+        return kEscapedMap[$1];
+    });
+
+    if (encodingSlash === false) {
+        result = result.replace(/%2F/gi, '/');
+    }
+
+    return result;
 };
 
-Queue.prototype.dequeue = function () {
-    return this.collection.shift();
+exports.trim = function (string) {
+    return (string || '').replace(/^\s+|\s+$/g, '');
 };
-
-module.exports = Queue;
-
-
-
-
-
-
-
-
-
 

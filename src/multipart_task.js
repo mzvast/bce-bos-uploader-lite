@@ -14,14 +14,18 @@
  * @author leeight
  */
 
-var async = require('async');
-var u = require('underscore');
-var sdk = require('bce-sdk-js');
-
+var Q = require('./vendor/q');
+var async = require('./vendor/async');
+var u = require('./vendor/underscore');
 var utils = require('./utils');
 var events = require('./events');
 var Task = require('./task');
 
+/**
+ * MultipartTask
+ *
+ * @class
+ */
 function MultipartTask() {
     Task.apply(this, arguments);
 
@@ -35,7 +39,7 @@ utils.inherits(MultipartTask, Task);
 
 MultipartTask.prototype.start = function () {
     if (this.aborted) {
-        return sdk.Q.resolve();
+        return Q.resolve();
     }
 
     var self = this;
@@ -58,7 +62,7 @@ MultipartTask.prototype.start = function () {
             uploadId = response.body.uploadId;
             var parts = response.body.parts || [];
             // 准备 uploadParts
-            var deferred = sdk.Q.defer();
+            var deferred = Q.defer();
             var tasks = utils.getTasks(file, uploadId, chunkSize, bucket, object);
             utils.filterTasks(tasks, parts);
 
@@ -147,7 +151,7 @@ MultipartTask.prototype._initiateMultipartUpload = function (file, chunkSize, bu
     };
     var promise = this.options.bos_multipart_auto_continue
         ? this._generateLocalKey(keyOptions)
-        : sdk.Q.resolve(null);
+        : Q.resolve(null);
 
     return promise.then(function (key) {
             localSaveKey = key;
@@ -193,7 +197,7 @@ MultipartTask.prototype._listParts = function (file, bucket, object, uploadId) {
 
     var localParts = dispatcher.dispatchEvent(events.kListParts, [file, uploadId]);
 
-    return sdk.Q.resolve(localParts)
+    return Q.resolve(localParts)
         .then(function (parts) {
             if (u.isArray(parts) && parts.length) {
                 return {
@@ -212,7 +216,7 @@ MultipartTask.prototype._listParts = function (file, bucket, object, uploadId) {
 MultipartTask.prototype._listAllParts = function (bucket, object, uploadId) {
     // isTruncated === true / false
     var self = this;
-    var deferred = sdk.Q.defer();
+    var deferred = Q.defer();
 
     var parts = [];
     var payload = null;
@@ -261,7 +265,7 @@ MultipartTask.prototype._uploadPart = function (state) {
             self.networkInfo.loadedBytes += item.partSize;
 
             // 跳过已上传的part
-            return sdk.Q.resolve({
+            return Q.resolve({
                 http_headers: {
                     etag: item.etag
                 },

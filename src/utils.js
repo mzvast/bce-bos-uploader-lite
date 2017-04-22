@@ -14,14 +14,13 @@
  * @author leeight
  */
 
-var urlModule = require('url');
-var qsModule = require('querystring');
-
-var u = require('underscore');
-var sdk = require('bce-sdk-js');
 var SparkMD5 = require('spark-md5');
 
+var qsModule = require('./vendor/querystring');
+var Q = require('./vendor/q');
+var u = require('./vendor/underscore');
 var Queue = require('./queue');
+var MimeType = require('./bce-sdk-js/mime.types');
 
 /**
  * 把文件进行切片，返回切片之后的数组
@@ -168,7 +167,7 @@ exports.uuid = function () {
  */
 exports.generateLocalKey = function (option, generator) {
     if (generator === 'default') {
-        return sdk.Q.resolve([
+        return Q.resolve([
             option.blob.name, option.blob.size,
             option.chunkSize, option.bucket,
             option.object
@@ -186,7 +185,7 @@ exports.generateLocalKey = function (option, generator) {
             ].join('&');
         });
     }
-    return sdk.Q.resolve(null);
+    return Q.resolve(null);
 };
 
 /**
@@ -205,7 +204,7 @@ exports.md5sum = function (file) {
     var spark = new SparkMD5.ArrayBuffer();
     var fileReader = new FileReader();
 
-    var deferred = sdk.Q.defer();
+    var deferred = Q.defer();
 
     fileReader.onload = function (e) {
         spark.append(e.target.result);
@@ -347,7 +346,7 @@ exports.extToMimeType = function (exts) {
         if (ext.indexOf('/') !== -1) {
             return ext;
         }
-        return sdk.MimeType.guess(ext);
+        return MimeType.guess(ext);
     }));
 
     return mimeTypes.join(',');
@@ -431,10 +430,15 @@ exports.toDHMS = function (seconds) {
     return {DD: days, HH: hours, MM: minutes, SS: seconds};
 };
 
+function parseHost(url) {
+    var match = /^\w+:\/\/([^\/]+)/.exec(url);
+    return match && match[1];
+}
+
 exports.fixXhr = function (options, isBos) {
     return function (httpMethod, resource, args, config) {
         var client = this;
-        var endpointHost = urlModule.parse(config.endpoint).host;
+        var endpointHost = parseHost(config.endpoint);
 
         // x-bce-date 和 Date 二选一，是必须的
         // 但是 Flash 无法设置 Date，因此必须设置 x-bce-date
@@ -470,7 +474,7 @@ exports.fixXhr = function (options, isBos) {
         }
         else if (isBos === true) {
             xhrUri = exports.transformUrl(config.endpoint + resource);
-            args.headers.host = urlModule.parse(xhrUri).host;
+            args.headers.host = parseHost(xhrUri);
         }
         else {
             xhrUri = config.endpoint + resource;
@@ -482,7 +486,7 @@ exports.fixXhr = function (options, isBos) {
             xhrBody = '{"FORCE_POST": true}';
         }
 
-        var deferred = sdk.Q.defer();
+        var deferred = Q.defer();
 
         var xhr = new mOxie.XMLHttpRequest();
 
@@ -636,7 +640,7 @@ exports.guessContentType = function (file, opt_ignoreCharset) {
     if (!contentType) {
         var object = file.name;
         var ext = object.split(/\./g).pop();
-        contentType = sdk.MimeType.guess(ext);
+        contentType = MimeType.guess(ext);
     }
 
     // Firefox在POST的时候，Content-Type 一定会有Charset的，因此

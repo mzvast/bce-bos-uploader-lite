@@ -14,10 +14,16 @@
  * @author leeight
  */
 
-var sdk = require('bce-sdk-js');
-
+var Q = require('./vendor/q');
+var Auth = require('./bce-sdk-js/auth');
 var utils = require('./utils');
 
+/**
+ * PolicyManager
+ *
+ * @class
+ * @param {Object} options The options.
+ */
 function PolicyManager(options) {
     this.options = options;
     this._cache = {};
@@ -27,10 +33,10 @@ PolicyManager.prototype.get = function (bucket) {
     var self = this;
 
     if (self._cache[bucket] != null) {
-        return sdk.Q.resolve(self._cache[bucket]);
+        return Q.resolve(self._cache[bucket]);
     }
 
-    return sdk.Q.resolve(this._getImpl(bucket)).then(function (payload) {
+    return Q.resolve(this._getImpl(bucket)).then(function (payload) {
         self._cache[bucket] = payload;
         return payload;
     });
@@ -50,7 +56,7 @@ PolicyManager.prototype._getImpl = function (bucket) {
 };
 
 PolicyManager.prototype._getFromLocal = function (bucketPolicy, credentials) {
-    var auth = new sdk.Auth(credentials.ak, credentials.sk);
+    var auth = new Auth(credentials.ak, credentials.sk);
     var policyBase64 = new Buffer(JSON.stringify(bucketPolicy)).toString('base64');
     var policySignature = auth.hash(policyBase64, credentials.sk);
     var policyAccessKey = credentials.ak;
@@ -68,7 +74,7 @@ PolicyManager.prototype._getFromRemote = function (bucketPolicy) {
     var timeout = options.uptoken_timeout || options.uptoken_jsonp_timeout;
     var viaJsonp = options.uptoken_via_jsonp;
 
-    var deferred = sdk.Q.defer();
+    var deferred = Q.defer();
     $.ajax({
         url: uptoken_url,
         jsonp: viaJsonp ? 'callback' : false,

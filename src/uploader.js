@@ -14,10 +14,8 @@
  * @author leeight
  */
 
-var sdk = require('bce-sdk-js');
-var u = require('underscore');
-var debug = require('debug')('bce-bos-uploader');
-
+var Q = require('./vendor/q');
+var u = require('./vendor/underscore');
 var utils = require('./utils');
 var tracker = require('./tracker');
 var events = require('./events');
@@ -29,6 +27,9 @@ var PostObjectTask = require('./post_object_task');
 var StsTokenManager = require('./sts_token_manager');
 var PolicyManager = require('./policy_manager');
 var NetworkInfo = require('./network_info');
+
+var Auth = require('./bce-sdk-js/auth');
+var BosClient = require('./bce-sdk-js/bos_client');
 
 /**
  * BCE BOS Uploader
@@ -61,9 +62,9 @@ function Uploader(options) {
     }
 
     /**
-     * @type {sdk.BosClient}
+     * @type {BosClient}
      */
-    this.client = new sdk.BosClient({
+    this.client = new BosClient({
         endpoint: utils.normalizeEndpoint(this.options.bos_endpoint),
         credentials: this.options.bos_credentials,
         sessionToken: this.options.uptoken
@@ -121,7 +122,7 @@ Uploader.prototype._getCustomizedSignature = function (uptokenUrl) {
             headers = u.omit(headers, options.auth_stripped_headers);
         }
 
-        var deferred = sdk.Q.defer();
+        var deferred = Q.defer();
         $.ajax({
             url: uptokenUrl,
             jsonp: viaJsonp ? 'callback' : false,
@@ -175,9 +176,8 @@ Uploader.prototype._invoke = function (methodName, args, throwErrors) {
         return method.apply(null, args);
     }
     catch (ex) {
-        debug('%s(%j) -> %s', methodName, args, ex);
         if (throwErrors === true) {
-            return sdk.Q.reject(ex);
+            return Q.reject(ex);
         }
     }
 };
@@ -267,15 +267,15 @@ Uploader.prototype._init = function () {
     }
 
     var promise = options.bos_credentials
-        ? sdk.Q.resolve()
+        ? Q.resolve()
         : self.refreshStsToken();
 
     promise.then(function () {
         if (options.bos_credentials) {
             self.client.createSignature = function (_, httpMethod, path, params, headers) {
                 var credentials = _ || this.config.credentials;
-                return sdk.Q.fcall(function () {
-                    var auth = new sdk.Auth(credentials.ak, credentials.sk);
+                return Q.fcall(function () {
+                    var auth = new Auth(credentials.ak, credentials.sk);
                     return auth.generateAuthorization(httpMethod, path, params, headers);
                 });
             };
@@ -293,7 +293,6 @@ Uploader.prototype._init = function () {
 
         self._policyManager = new PolicyManager(options);
     }).catch(function (error) {
-        debug(error);
         self._invoke(events.kError, [error]);
     });
 };
@@ -350,16 +349,6 @@ Uploader.prototype._initEvents = function () {
         // options.bos_relay_server
         // options.swf_url
         this.client.sendHTTPRequest = u.bind(utils.fixXhr(this.options, true), this.client);
-
-        // 自动修复一些其它 XXXClient 发送请求的接口
-        sdk.DocClient.Document.prototype.sendHTTPRequest = utils.fixXhr(this.options);
-        sdk.VodClient.prototype.sendHTTPRequest = utils.fixXhr(this.options);
-        if (typeof sdk.VodClient.Media === 'function') {
-            sdk.VodClient.Media.prototype.sendHTTPRequest = utils.fixXhr(this.options);
-        }
-        if (typeof sdk.VodClient.Player === 'function') {
-            sdk.VodClient.Player.prototype.sendHTTPRequest = utils.fixXhr(this.options);
-        }
     }
 };
 
@@ -419,7 +408,6 @@ Uploader.prototype._onFilesAdded = function (e) {
 };
 
 Uploader.prototype._onError = function (e) {
-    debug(e);
 };
 
 /**
@@ -487,10 +475,17 @@ Uploader.prototype.start = function () {
         utils.eachLimit(this._files, taskParallel,
             function (file, callback) {
                 file._previousLoaded = 0;
-                self._uploadNext(file).fin(function () {
-                    delete self._uploadingFiles[file.uuid];
-                    callback(null, file);
-                });
+                self._uploadNext(file)
+                    .then(function () {
+                        // fulfillment
+                        delete self._uploadingFiles[file.uuid];
+                        callback(null, file);
+                    })
+                    .catch(function () {
+                        // rejection
+                        delete self._uploadingFiles[file.uuid];
+                        callback(null, file);
+                    });
             },
             function (error) {
                 self._working = false;
@@ -566,27 +561,27 @@ Uploader.prototype.refreshStsToken = function () {
             });
         });
     }
-    return sdk.Q.resolve();
+    return Q.resolve();
 };
 
 Uploader.prototype._uploadNext = function (file) {
     if (this._abort) {
         this._working = false;
-        return sdk.Q.resolve();
+        return Q.resolve();
     }
 
     if (file._aborted === true) {
-        return sdk.Q.resolve();
+        return Q.resolve();
     }
 
     var throwErrors = true;
     var returnValue = this._invoke(events.kBeforeUpload, [file], throwErrors);
     if (returnValue === false) {
-        return sdk.Q.resolve();
+        return Q.resolve();
     }
 
     var self = this;
-    return sdk.Q.resolve(returnValue)
+    return Q.resolve(returnValue)
         .then(function () {
             return self._uploadNextImpl(file);
         })
@@ -607,7 +602,7 @@ Uploader.prototype._uploadNextImpl = function (file) {
         'bos_multipart_auto_continue',
         'bos_multipart_local_key_generator'
     );
-    return sdk.Q.all([
+    return Q.all([
         this._invoke(events.kKey, [file], throwErrors),
         this._invoke(events.kObjectMetas, [file])
     ]).then(function (array) {

@@ -14,14 +14,18 @@
  * @author leeight
  */
 
-var async = require('async');
-var u = require('underscore');
-var sdk = require('bce-sdk-js');
-
+var Q = require('./vendor/q');
+var async = require('./vendor/async');
+var u = require('./vendor/underscore');
 var utils = require('./utils');
 var events = require('./events');
 var Task = require('./task');
 
+/**
+ * AppendObjectTask
+ *
+ * @class
+ */
 function AppendObjectTask() {
     Task.apply(this, arguments);
 }
@@ -29,7 +33,7 @@ utils.inherits(AppendObjectTask, Task);
 
 AppendObjectTask.prototype.start = function () {
     if (this.aborted) {
-        return sdk.Q.resolve();
+        return Q.resolve();
     }
 
     var self = this;
@@ -53,14 +57,14 @@ AppendObjectTask.prototype.start = function () {
             if (!appendable) {
                 // Normal Object 不能切换为 Appendable Object
                 dispatcher.dispatchEvent(events.kUploadProgress, [file, 1, null]);
-                return sdk.Q.resolve();
+                return Q.resolve();
             }
 
             var contentLength = +(httpHeaders['content-length']);
             if (contentLength >= file.size) {
                 // 服务端的文件不小于本地，就没必要上传了
                 dispatcher.dispatchEvent(events.kUploadProgress, [file, 1, null]);
-                return sdk.Q.resolve();
+                return Q.resolve();
             }
 
             // offset 和 content-length 应该是一样大小的吧？
@@ -74,7 +78,7 @@ AppendObjectTask.prototype.start = function () {
             // XXX 一般来说，如果启用了 (bos_appendable)，就可以考虑把 chunk_size 设置为一个比较小的值
             var tasks = utils.getAppendableTasks(file.size, offset, chunkSize);
 
-            var deferred = sdk.Q.defer();
+            var deferred = Q.defer();
             async.mapLimit(tasks, 1, function (item, callback) {
                 var offset = item.start;
                 var offsetArgument = offset > 0 ? offset : null;
@@ -119,7 +123,7 @@ AppendObjectTask.prototype.start = function () {
         .catch(function (error) {
             var eventType = self.aborted ? events.kAborted : events.kError;
             dispatcher.dispatchEvent(eventType, [error, file]);
-            return sdk.Q.resolve();
+            return Q.resolve();
         });
 };
 

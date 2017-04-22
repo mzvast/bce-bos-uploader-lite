@@ -16,6 +16,11 @@
 
 var utils = require('./utils');
 
+/**
+ * NetworkInfo
+ *
+ * @class
+ */
 function NetworkInfo() {
     /**
      * 记录从 start 开始已经上传的字节数.

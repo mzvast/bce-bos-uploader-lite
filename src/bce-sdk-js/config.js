@@ -10,33 +10,18 @@
  * an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the License for the
  * specific language governing permissions and limitations under the License.
  *
- * @file src/queue.js
+ * @file src/config.js
  * @author leeight
  */
 
-/**
- * Queue
- *
- * @class
- * @param {*} collection The collection.
- */
-function Queue(collection) {
-    this.collection = collection;
-}
+/* eslint-env node */
 
-Queue.prototype.isEmpty = function () {
-    return this.collection.length <= 0;
+exports.DEFAULT_SERVICE_DOMAIN = 'baidubce.com';
+
+exports.DEFAULT_CONFIG = {
+    protocol: 'http',
+    region: 'bj'
 };
-
-Queue.prototype.size = function () {
-    return this.collection.length;
-};
-
-Queue.prototype.dequeue = function () {
-    return this.collection.shift();
-};
-
-module.exports = Queue;
 
 
 
