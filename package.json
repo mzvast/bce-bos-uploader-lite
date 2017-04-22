@@ -20,8 +20,6 @@
     "isarray": "^2.0.1",
     "lodash.assign": "^4.2.0",
     "lodash.bind": "^4.2.1",
-    "lodash.filter": "^4.6.0",
-    "lodash.find": "^4.6.0",
     "lodash.isfunction": "^3.0.8",
     "lodash.isnumber": "^3.0.3",
     "lodash.isobject": "^3.0.2",

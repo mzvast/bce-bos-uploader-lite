@@ -22,6 +22,26 @@ function foreach(array, callback, context) {
     }
 }
 
+function find(array, callback, context) {
+    for (var i = 0; i < array.length; i++) {
+        var value = array[i];
+        if (callback.call(context, value, i, array)) {
+            return value;
+        }
+    }
+}
+
+function filter(array, callback, context) {
+    var res = [];
+    for (var i = 0; i < array.length; i++) {
+        var value = array[i];
+        if (callback.call(context, value, i, array)) {
+            res.push(value);
+        }
+    }
+    return res;
+}
+
 var hasOwnProperty = Object.prototype.hasOwnProperty;
 var hasDontEnumBug = !({toString: null}).propertyIsEnumerable('toString');
 var dontEnums = ['toString', 'toLocaleString', 'valueOf', 'hasOwnProperty',
@@ -52,8 +72,8 @@ function keys(obj) {
 exports.bind = require('lodash.bind');
 exports.each = foreach;
 exports.extend = require('lodash.assign');
-exports.filter = require('lodash.filter');
-exports.find = require('lodash.find');
+exports.filter = filter;
+exports.find = find;
 exports.isArray = require('isarray');
 exports.isFunction = require('lodash.isfunction');
 exports.isNumber = require('lodash.isnumber');
