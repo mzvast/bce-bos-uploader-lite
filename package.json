@@ -34,8 +34,7 @@
     "lodash.pick": "^4.4.0",
     "lodash.reduce": "^4.6.0",
     "lodash.some": "^4.6.0",
-    "lodash.uniq": "^4.5.0",
-    "spark-md5": "^2.0.2"
+    "lodash.uniq": "^4.5.0"
   },
   "devDependencies": {
     "browserify": "10.2.6",

@@ -14,8 +14,6 @@
  * @author leeight
  */
 
-var SparkMD5 = require('spark-md5');
-
 var qsModule = require('./vendor/querystring');
 var Q = require('./vendor/q');
 var u = require('./vendor/underscore');
@@ -181,62 +179,7 @@ exports.generateLocalKey = function (option, generator) {
             option.object
         ].join('&'));
     }
-    else if (generator === 'md5') {
-        return exports.md5sum(option.blob).then(function (md5) {
-            return [
-                md5,
-                option.blob.name,
-                option.blob.size,
-                option.chunkSize,
-                option.bucket,
-                option.object
-            ].join('&');
-        });
-    }
     return Q.resolve(null);
-};
-
-/**
- * 基于 SparkMD5 来快速的计算 blob 的md5
- * 貌似直接使用 bce-sdk-js/src/crypto 里面的 md5blob，对于 300M 的文件，Chrome 直接
- * 挂掉了
- *
- * @param {Blob} file 需要计算md5的文件内容.
- * @return {Promise}
- */
-exports.md5sum = function (file) {
-    var blobSlice = File.prototype.slice || File.prototype.mozSlice || File.prototype.webkitSlice;
-    var chunkSize = 2097152;
-    var chunks = Math.ceil(file.size / chunkSize);
-    var currentChunk = 0;
-    var spark = new SparkMD5.ArrayBuffer();
-    var fileReader = new FileReader();
-
-    var deferred = Q.defer();
-
-    fileReader.onload = function (e) {
-        spark.append(e.target.result);
-        currentChunk++;
-
-        if (currentChunk < chunks) {
-            loadNext();
-        }
-        else {
-            deferred.resolve(spark.end());
-        }
-    };
-    fileReader.onerror = function (error) {
-        deferred.reject(error);
-    };
-
-    function loadNext() {
-        var start = currentChunk * chunkSize;
-        var end = ((start + chunkSize) >= file.size) ? file.size : start + chunkSize;
-        fileReader.readAsArrayBuffer(blobSlice.call(file, start, end));
-    }
-    loadNext();
-
-    return deferred.promise;
 };
 
 exports.getDefaultPolicy = function (bucket) {
