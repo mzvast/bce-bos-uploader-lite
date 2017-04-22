@@ -119,8 +119,8 @@ HttpClient.prototype._doRequest = function (httpMethod, requestUrl, requestHeade
             xhr.setRequestHeader(header, value);
         }
     }
-    xhr.onerror = function () {
-        deferred.reject(new Error('xhr error'));
+    xhr.onerror = function (error) {
+        deferred.reject(error);
     };
     xhr.onabort = function () {
         deferred.reject(new Error('xhr aborted'));

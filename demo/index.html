@@ -175,10 +175,10 @@
       browse_button: '#file',
       multi_selection: true,
       retry_interval: 5000,
-      bos_ak: 'b92ea4a39f3645c8ae5f64ba5fc2a357',
-      bos_sk: 'a4ce012968714958a21bb90dc180de17',
-      bos_bucket: kBucket,
-      bos_endpoint: kBosEndpoint,
+      // bos_ak: 'b92ea4a39f3645c8ae5f64ba5fc2a357',
+      // bos_sk: 'a4ce012968714958a21bb90dc180de17',
+      // bos_bucket: kBucket,
+      // bos_endpoint: kBosEndpoint,
       // uptoken_via_jsonp: false,
       // uptoken_url: kUptokenUrl,
       // get_new_uptoken: false,
@@ -242,8 +242,8 @@
           if (month < 10) { month = '0' + month; }
           var day = date.getDate();
           if (day < 10) { day = '0' + day; }
-          var key = year + '/' + month + '/' + day + '/' + file.name;
-          return key;
+          // var key = year + '/' + month + '/' + day + '/' + file.name;
+          // return key;
 
           var bucket = 'bce-bos-uploader';
           var sts = JSON.stringify(baidubce.utils.getDefaultACL(bucket));
@@ -251,7 +251,7 @@
           var deferred = baidubce.sdk.Q.defer();
           $.ajax({
             url: kUptokenUrl,
-            dataType: 'jsonp',
+            dataType: 'json',
             data: {sts: sts, filename: file.name}
           }).done(function (payload) {
             uploader.setOptions({
