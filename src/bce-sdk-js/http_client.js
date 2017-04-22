@@ -166,6 +166,8 @@ HttpClient.prototype._doRequest = function (httpMethod, requestUrl, requestHeade
     }
     xhr.send(body);
 
+    self._req = {xhr: xhr};
+
     return deferred.promise;
 };
 
