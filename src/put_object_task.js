@@ -46,6 +46,7 @@ PutObjectTask.prototype.start = function (opt_maxRetries) {
     var maxRetries = opt_maxRetries == null
         ? this.options.max_retries
         : opt_maxRetries;
+    var retryInterval = this.options.retry_interval;
 
     var contentType = utils.guessContentType(file);
     var options = u.extend({'Content-Type': contentType}, metas);
@@ -76,7 +77,9 @@ PutObjectTask.prototype.start = function (opt_maxRetries) {
         // }
         else if (maxRetries > 0 && !self.aborted) {
             // 还有机会重试
-            return self.start(maxRetries - 1);
+            return utils.delay(retryInterval).then(function () {
+                return self.start(maxRetries - 1);
+            });
         }
 
         // 重试结束了，不管了，继续下一个文件的上传

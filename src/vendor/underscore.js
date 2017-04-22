@@ -25,6 +25,9 @@
    1 u.uniq(
 */
 
+function noop() {
+}
+
 exports.bind = require('lodash.bind');
 exports.each = require('lodash.foreach');
 exports.extend = require('lodash.assign');
@@ -43,6 +46,7 @@ exports.reduce = require('lodash.reduce');
 exports.some = require('lodash.some');
 exports.uniq = require('lodash.uniq');
 exports.keys = require('lodash.keys');
+exports.noop = noop;
 
 
 

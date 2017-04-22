@@ -17,10 +17,10 @@
 /* eslint-env node */
 /* eslint max-params:[0,10] */
 
-var path = require('path');
-
+var path = require('../vendor/path');
 var util = require('../vendor/util');
 var u = require('../vendor/underscore');
+var Buffer = require('../vendor/Buffer');
 var H = require('./headers');
 var strings = require('./strings');
 var HttpClient = require('./http_client');
@@ -154,33 +154,6 @@ BosClient.prototype.uploadPartFromBlob = function (bucketName, key, uploadId, pa
         bucketName: bucketName,
         key: key,
         body: blob,
-        headers: options.headers,
-        params: {
-            partNumber: partNumber,
-            uploadId: uploadId
-        },
-        config: options.config
-    });
-};
-
-BosClient.prototype.uploadPartFromDataUrl = function (bucketName, key, uploadId, partNumber,
-                                                      partSize, dataUrl, options) {
-
-    var data = new Buffer(dataUrl, 'base64');
-    if (data.length !== partSize) {
-        throw new TypeError(util.format('Invalid partSize %d and data length %d',
-            partSize, data.length));
-    }
-
-    var headers = {};
-    headers[H.CONTENT_LENGTH] = partSize;
-    headers[H.CONTENT_TYPE] = 'application/octet-stream';
-
-    options = this._checkOptions(u.extend(headers, options));
-    return this.sendRequest('PUT', {
-        bucketName: bucketName,
-        key: key,
-        body: data,
         headers: options.headers,
         params: {
             partNumber: partNumber,

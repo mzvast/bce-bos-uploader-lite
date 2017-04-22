@@ -21,11 +21,8 @@ var tracker = require('./tracker');
 var events = require('./events');
 var kDefaultOptions = require('./config');
 var PutObjectTask = require('./put_object_task');
-var AppendObjectTask = require('./append_object_task');
 var MultipartTask = require('./multipart_task');
-var PostObjectTask = require('./post_object_task');
 var StsTokenManager = require('./sts_token_manager');
-var PolicyManager = require('./policy_manager');
 var NetworkInfo = require('./network_info');
 
 var Auth = require('./bce-sdk-js/auth');
@@ -102,7 +99,6 @@ function Uploader(options) {
      */
     this._xhr2Supported = utils.isXhr2Supported();
 
-    this._policyManager = null;
     this._networkInfo = new NetworkInfo();
 
     this._init();
@@ -290,8 +286,6 @@ Uploader.prototype._init = function () {
             self._initEvents();
             self._invoke(events.kPostInit);
         }
-
-        self._policyManager = new PolicyManager(options);
     }).catch(function (error) {
         self._invoke(events.kError, [error]);
     });
@@ -597,7 +591,7 @@ Uploader.prototype._uploadNextImpl = function (file) {
     var throwErrors = true;
 
     var defaultTaskOptions = u.pick(options,
-        'flash_swf_url', 'max_retries', 'chunk_size',
+        'flash_swf_url', 'max_retries', 'chunk_size', 'retry_interval',
         'bos_multipart_parallel',
         'bos_multipart_auto_continue',
         'bos_multipart_local_key_generator'
@@ -634,14 +628,7 @@ Uploader.prototype._uploadNextImpl = function (file) {
         });
 
         var task = null;
-        if (!self._xhr2Supported) {
-            task = new PostObjectTask(client, eventDispatcher, taskOptions);
-            task.setPolicyManager(self._policyManager);
-        }
-        else if (options.bos_appendable === true) {
-            task = new AppendObjectTask(client, eventDispatcher, taskOptions);
-        }
-        else if (multipart === 'auto' && file.size > options.bos_multipart_min_size) {
+        if (multipart === 'auto' && file.size > options.bos_multipart_min_size) {
             task = new MultipartTask(client, eventDispatcher, taskOptions);
         }
         else {

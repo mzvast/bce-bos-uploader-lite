@@ -16,15 +16,12 @@
 
 /* eslint-env node */
 
-var EventEmitter = require('events').EventEmitter;
-
+var EventEmitter = require('../vendor/events').EventEmitter;
 var util = require('../vendor/util');
 var Q = require('../vendor/q');
 var u = require('../vendor/underscore');
 var config = require('./config');
 var Auth = require('./auth');
-var HttpClient = require('./http_client');
-var H = require('./headers');
 
 /**
  * BceBaseClient
@@ -73,39 +70,6 @@ BceBaseClient.prototype.createSignature = function (credentials, httpMethod, pat
         var auth = new Auth(credentials.ak, credentials.sk);
         return auth.generateAuthorization(httpMethod, path, params, headers);
     });
-};
-
-BceBaseClient.prototype.sendRequest = function (httpMethod, resource, varArgs) {
-    var defaultArgs = {
-        body: null,
-        headers: {},
-        params: {},
-        config: {},
-        outputStream: null
-    };
-    var args = u.extend(defaultArgs, varArgs);
-
-    var config = u.extend({}, this.config, args.config);
-    if (config.sessionToken) {
-        args.headers[H.SESSION_TOKEN] = config.sessionToken;
-    }
-
-    return this.sendHTTPRequest(httpMethod, resource, args, config);
-};
-
-BceBaseClient.prototype.sendHTTPRequest = function (httpMethod, resource, args, config) {
-    var client = this;
-    var agent = this._httpAgent = new HttpClient(config);
-    u.each(['progress', 'error', 'abort'], function (eventName) {
-        agent.on(eventName, function (evt) {
-            client.emit(eventName, evt);
-        });
-    });
-
-    return this._httpAgent.sendRequest(httpMethod, resource, args.body,
-        args.headers, args.params, u.bind(this.createSignature, this),
-        args.outputStream
-    );
 };
 
 module.exports = BceBaseClient;

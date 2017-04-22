@@ -14,7 +14,9 @@
  * @author leeight
  */
 
-var sdk = require('bce-sdk-js');
+var Q = require('./src/vendor/q');
+var BosClient = require('./src/bce-sdk-js/bos_client');
+var Auth = require('./src/bce-sdk-js/auth');
 
 var Uploader = require('./src/uploader');
 var utils = require('./src/utils');
@@ -24,7 +26,11 @@ module.exports = {
         Uploader: Uploader
     },
     utils: utils,
-    sdk: sdk
+    sdk: {
+        Q: Q,
+        BosClient: BosClient,
+        Auth: Auth
+    }
 };
 
 

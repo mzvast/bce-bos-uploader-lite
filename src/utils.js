@@ -122,6 +122,14 @@ exports.isAppendable = function (headers) {
     return headers['x-bce-object-type'] === 'Appendable';
 };
 
+exports.delay = function (ms) {
+    var deferred = Q.defer();
+    setTimeout(function () {
+        deferred.resolve();
+    }, ms);
+    return deferred.promise;
+};
+
 /**
  * 规范化用户的输入
  *
@@ -446,7 +454,8 @@ exports.fixXhr = function (options, isBos) {
         args.headers.host = endpointHost;
 
         // Flash 的缓存貌似比较厉害，强制请求新的
-        args.params['.stamp'] = new Date().getTime();
+        // XXX 好像服务器端不会把 .stamp 这个参数加入到签名的计算逻辑里面去
+        // args.params['.stamp'] = new Date().getTime();
 
         // 只有 PUT 才会触发 progress 事件
         var originalHttpMethod = httpMethod;

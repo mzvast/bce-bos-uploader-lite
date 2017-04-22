@@ -3,7 +3,8 @@
  * @author leeight
  */
 
-var CryptoJS = require('crypto-js');
+var HmacSHA256 = require('./crypto-js/hmac-sha256');
+var Hex = require('./crypto-js/core').enc.Hex;
 
 exports.createHmac = function (type, key) {
     if (type === 'sha256') {
@@ -12,7 +13,7 @@ exports.createHmac = function (type, key) {
         var sha256Hmac = {
             update: function (data) {
                 /* eslint-disable */
-                result = CryptoJS.HmacSHA256(data, key).toString(CryptoJS.enc.Hex);
+                result = HmacSHA256(data, key).toString(Hex);
                 /* eslint-enable */
             },
             digest: function () {

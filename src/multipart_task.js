@@ -275,6 +275,7 @@ MultipartTask.prototype._uploadPart = function (state) {
         var maxRetries = opt_maxRetries == null
             ? self.options.max_retries
             : opt_maxRetries;
+        var retryInterval = self.options.retry_interval;
 
         var blob = item.file.slice(item.start, item.stop + 1);
         blob._previousLoaded = 0;
@@ -308,7 +309,9 @@ MultipartTask.prototype._uploadPart = function (state) {
             .catch(function (error) {
                 if (maxRetries > 0 && !self.aborted) {
                     // 还有重试的机会
-                    return uploadPartInner(item, maxRetries - 1);
+                    return utils.delay(retryInterval).then(function () {
+                        return uploadPartInner(item, maxRetries - 1);
+                    });
                 }
                 // 没有机会重试了 :-(
                 throw error;

@@ -39,6 +39,9 @@ var kDefaultOptions = {
     // 失败之后重试的次数(单个文件或者分片)，默认(0)，不重试
     max_retries: 0,
 
+    // 失败重试的间隔时间，默认 1000ms
+    retry_interval: 1000,
+
     // 是否自动上传，默认(false)
     auto_start: false,
 
