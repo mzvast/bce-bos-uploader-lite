@@ -367,6 +367,13 @@ Uploader.prototype._filterFiles = function (candidates) {
     return this._invoke(events.kFilesFilter, [files]) || files;
 };
 
+function buildAbortHandler(item, self) {
+    return function () {
+        item._aborted = true;
+        self._invoke(events.kAborted, [null, item]);
+    };
+}
+
 Uploader.prototype._onFilesAdded = function (e) {
     var self = this;
     var files = e.target.files;
@@ -379,19 +386,20 @@ Uploader.prototype._onFilesAdded = function (e) {
     }
     files = this._filterFiles(files);
     if (u.isArray(files) && files.length) {
-        this._networkInfo.totalBytes += u.reduce(files, function (previous, item) {
+        var totalBytes = 0;
+        for (var i = 0; i < files.length; i++) {
+            var item = files[i];
+
             // 这里是 abort 的默认实现，开始上传的时候，会改成另外的一种实现方式
             // 默认的实现是为了支持在没有开始上传之前，也可以取消上传的需求
-            item.abort = function () {
-                item._aborted = true;
-                self._invoke(events.kAborted, [null, item]);
-            };
+            item.abort = buildAbortHandler(item, self);
 
             // 内部的 uuid，外部也可以使用，比如 remove(item.uuid) / remove(item)
             item.uuid = utils.uuid();
 
-            return previous + item.size;
-        }, 0);
+            totalBytes += item.size;
+        }
+        this._networkInfo.totalBytes += totalBytes;
         this._files.push.apply(this._files, files);
         this._invoke(events.kFilesAdded, [files]);
     }

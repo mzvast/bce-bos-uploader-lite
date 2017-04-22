@@ -42,6 +42,12 @@ function filter(array, callback, context) {
     return res;
 }
 
+function bind(fn, context) {
+    return function () {
+        return fn.apply(context, [].slice.call(arguments));
+    };
+}
+
 var hasOwnProperty = Object.prototype.hasOwnProperty;
 var hasDontEnumBug = !({toString: null}).propertyIsEnumerable('toString');
 var dontEnums = ['toString', 'toLocaleString', 'valueOf', 'hasOwnProperty',
@@ -69,7 +75,7 @@ function keys(obj) {
     return result;
 }
 
-exports.bind = require('lodash.bind');
+exports.bind = bind;
 exports.each = foreach;
 exports.extend = require('lodash.assign');
 exports.filter = filter;
@@ -82,7 +88,6 @@ exports.isString = require('lodash.isstring');
 exports.map = map;
 exports.omit = require('lodash.omit');
 exports.pick = require('lodash.pick');
-exports.reduce = require('lodash.reduce');
 exports.some = require('lodash.some');
 exports.uniq = require('lodash.uniq');
 exports.keys = keys;
