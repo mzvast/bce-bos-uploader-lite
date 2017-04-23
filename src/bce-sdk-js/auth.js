@@ -17,6 +17,7 @@
 /* eslint-env node */
 /* eslint max-params:[0,10] */
 
+var helper = require('../vendor/helper');
 var util = require('../vendor/util');
 var u = require('../vendor/underscore');
 var H = require('./headers');
@@ -52,7 +53,7 @@ Auth.prototype.generateAuthorization = function (method, resource, params,
 
     var now = timestamp ? new Date(timestamp * 1000) : new Date();
     var rawSessionKey = util.format('bce-auth-v1/%s/%s/%d',
-        this.ak, now.toISOString().replace(/\.\d+Z$/, 'Z'), expirationInSeconds || 1800);
+        this.ak, helper.toUTCString(now), expirationInSeconds || 1800);
     var sessionKey = this.hash(rawSessionKey, this.sk);
 
     var canonicalUri = this.uriCanonicalization(resource);
@@ -86,7 +87,7 @@ Auth.prototype.uriCanonicalization = function (uri) {
  */
 Auth.prototype.queryStringCanonicalization = function (params) {
     var canonicalQueryString = [];
-    Object.keys(params).forEach(function (key) {
+    u.each(u.keys(params), function (key) {
         if (key.toLowerCase() === H.AUTHORIZATION.toLowerCase()) {
             return;
         }
@@ -114,12 +115,12 @@ Auth.prototype.headersCanonicalization = function (headers, headersToSign) {
     }
 
     var headersMap = {};
-    headersToSign.forEach(function (item) {
+    u.each(headersToSign, function (item) {
         headersMap[item.toLowerCase()] = true;
     });
 
     var canonicalHeaders = [];
-    Object.keys(headers).forEach(function (key) {
+    u.each(u.keys(headers), function (key) {
         var value = headers[key];
         value = u.isString(value) ? strings.trim(value) : value;
         if (value == null || value === '') {
@@ -136,7 +137,7 @@ Auth.prototype.headersCanonicalization = function (headers, headersToSign) {
     canonicalHeaders.sort();
 
     var signedHeaders = [];
-    canonicalHeaders.forEach(function (item) {
+    u.each(canonicalHeaders, function (item) {
         signedHeaders.push(item.split(':')[0]);
     });
 

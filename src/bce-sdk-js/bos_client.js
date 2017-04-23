@@ -242,11 +242,11 @@ BosClient.prototype.sendRequest = function (httpMethod, varArgs) {
     var args = u.extend(defaultArgs, varArgs);
 
     var config = u.extend({}, this.config, args.config);
-    var resource = path.normalize(path.join(
+    var resource = [
         '/v1',
         strings.normalize(args.bucketName || ''),
         strings.normalize(args.key || '', false)
-    )).replace(/\\/g, '/');
+    ].join('/');
 
     if (config.sessionToken) {
         args.headers[H.SESSION_TOKEN] = config.sessionToken;
@@ -297,7 +297,8 @@ BosClient.prototype._checkOptions = function (options, allowedParams) {
 };
 
 BosClient.prototype._prepareObjectHeaders = function (options) {
-    var allowedHeaders = [
+    var allowedHeaders = {};
+    u.each([
         H.CONTENT_LENGTH,
         H.CONTENT_ENCODING,
         H.CONTENT_MD5,
@@ -310,10 +311,13 @@ BosClient.prototype._prepareObjectHeaders = function (options) {
         H.EXPIRES,
         H.X_BCE_OBJECT_ACL,
         H.X_BCE_OBJECT_GRANT_READ
-    ];
+    ], function (header) {
+        allowedHeaders[header] = true;
+    });
+
     var metaSize = 0;
     var headers = u.pick(options, function (value, key) {
-        if (allowedHeaders.indexOf(key) !== -1) {
+        if (allowedHeaders[key]) {
             return true;
         }
         else if (/^x\-bce\-meta\-/.test(key)) {

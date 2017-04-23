@@ -17,6 +17,7 @@
 var qsModule = require('./vendor/querystring');
 var Q = require('./vendor/q');
 var u = require('./vendor/underscore');
+var helper = require('./vendor/helper');
 var Queue = require('./queue');
 var MimeType = require('./bce-sdk-js/mime.types');
 
@@ -191,7 +192,7 @@ exports.getDefaultPolicy = function (bucket) {
 
     // 默认是 24小时 之后到期
     var expiration = new Date(now + 24 * 60 * 60 * 1000);
-    var utcDateTime = expiration.toISOString().replace(/\.\d+Z$/, 'Z');
+    var utcDateTime = helper.toUTCString(expiration);
 
     return {
         expiration: utcDateTime,
@@ -393,12 +394,12 @@ exports.fixXhr = function (options, isBos) {
 
         // x-bce-date 和 Date 二选一，是必须的
         // 但是 Flash 无法设置 Date，因此必须设置 x-bce-date
-        args.headers['x-bce-date'] = new Date().toISOString().replace(/\.\d+Z$/, 'Z');
+        args.headers['x-bce-date'] = helper.toUTCString(new Date());
         args.headers.host = endpointHost;
 
         // Flash 的缓存貌似比较厉害，强制请求新的
         // XXX 好像服务器端不会把 .stamp 这个参数加入到签名的计算逻辑里面去
-        // args.params['.stamp'] = new Date().getTime();
+        args.params['.stamp'] = new Date().getTime();
 
         // 只有 PUT 才会触发 progress 事件
         var originalHttpMethod = httpMethod;
@@ -426,6 +427,7 @@ exports.fixXhr = function (options, isBos) {
         }
         else if (isBos === true) {
             xhrUri = exports.transformUrl(config.endpoint + resource);
+            resource = xhrUri.replace(/^\w+:\/\/[^\/]+\//, '/');
             args.headers.host = parseHost(xhrUri);
         }
         else {
@@ -517,7 +519,7 @@ exports.fixXhr = function (options, isBos) {
 
             for (var key in args.headers) {
                 if (!args.headers.hasOwnProperty(key)
-                    || key === 'host') {
+                    || /(host|content\-length)/i.test(key)) {
                     continue;
                 }
                 var value = args.headers[key];

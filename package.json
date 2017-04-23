@@ -20,8 +20,7 @@
     "async.util.isarray": "^0.5.2",
     "async.util.noop": "^0.5.2",
     "lodash.isnumber": "^3.0.3",
-    "lodash.isobject": "^3.0.2",
-    "lodash.isstring": "^4.0.1"
+    "lodash.isobject": "^3.0.2"
   },
   "devDependencies": {
     "browserify": "10.2.6",

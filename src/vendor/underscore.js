@@ -9,7 +9,14 @@ var isArray = require('async.util.isarray');
 var noop = require('async.util.noop');
 var isNumber = require('lodash.isnumber');
 var isObject = require('lodash.isobject');
-var isString = require('lodash.isstring');
+
+var stringTag = '[object String]';
+var objectProto = Object.prototype;
+var objectToString = objectProto.toString;
+
+function isString(value) {
+    return typeof value === 'string' || objectToString.call(value) === stringTag;
+}
 
 function isFunction(value) {
     return typeof value === 'function';

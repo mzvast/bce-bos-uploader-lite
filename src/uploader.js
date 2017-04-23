@@ -632,7 +632,9 @@ Uploader.prototype._uploadNextImpl = function (file) {
         });
 
         var TaskConstructor = PutObjectTask;
-        if (multipart === 'auto' && file.size > options.bos_multipart_min_size) {
+        if (multipart === 'auto'
+            && self._xhr2Supported
+            && file.size > options.bos_multipart_min_size) {
             TaskConstructor = MultipartTask;
         }
         var task = new TaskConstructor(client, eventDispatcher, taskOptions);

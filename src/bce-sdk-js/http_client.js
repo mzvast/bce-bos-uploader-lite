@@ -21,6 +21,7 @@
 var EventEmitter = require('../vendor/events').EventEmitter;
 var Buffer = require('../vendor/Buffer');
 var Q = require('../vendor/q');
+var helper = require('../vendor/helper');
 var u = require('../vendor/underscore');
 var util = require('../vendor/util');
 var H = require('./headers');
@@ -68,7 +69,7 @@ HttpClient.prototype.sendRequest = function (httpMethod, path, body, headers, pa
     var requestUrl = this._getRequestUrl(path, params);
 
     var defaultHeaders = {};
-    defaultHeaders[H.X_BCE_DATE] = new Date().toISOString().replace(/\.\d+Z$/, 'Z');
+    defaultHeaders[H.X_BCE_DATE] = helper.toUTCString(new Date());
     defaultHeaders[H.CONTENT_TYPE] = 'application/json; charset=UTF-8';
     defaultHeaders[H.HOST] = /^\w+:\/\/([^\/]+)/.exec(this.config.endpoint)[1];
 
@@ -136,6 +137,9 @@ HttpClient.prototype._doRequest = function (httpMethod, requestUrl, requestHeade
             var contentType = xhr.getResponseHeader('Content-Type');
             var isJSON = /application\/json/.test(contentType);
             var responseBody = isJSON ? JSON.parse(xhr.responseText) : xhr.responseText;
+            if (!responseBody) {
+                responseBody = {};
+            }
 
             var isSuccess = status >= 200 && status < 300 || status === 304;
             if (isSuccess) {

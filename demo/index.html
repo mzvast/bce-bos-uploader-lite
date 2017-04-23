@@ -5,9 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>bce-bos-uploader simple demo</title>
     <link rel="stylesheet" type="text/css" href="../bower_components/bootstrap/dist/css/bootstrap.min.css" />
-    <!--[if lt IE 8]><script src="../bower_components/json3/lib/json3.min.js"></script><![endif]-->
-    <!--[if lt IE 9]><script src="../bower_components/js-polyfills/es5.js"></script><![endif]-->
-    <!--[if lt IE 10]><script src="../bower_components/moxie/bin/js/moxie.min.js"></script><![endif]-->
+    <!--[if lte IE 9]><script src="../bower_components/moxie/bin/js/moxie.min.js"></script><![endif]-->
     <script src="../bower_components/jquery/dist/jquery.js"></script>
     <script src="../bower_components/humanize/humanize.js"></script>
     <script src="../bce-bos-uploader.bundle.js"></script>
@@ -223,10 +221,10 @@
         BeforeUpload: function (_, file) {
           file.__startTime = new Date().getTime();
           var row = getRowById(file.__id);
-          if (/\.(pdf)$/i.test(file.name)) {
-            row.setIgnore(true);
-            return false;
-          }
+          // if (/\.(pdf)$/i.test(file.name)) {
+          //  row.setIgnore(true);
+          //  return false;
+          // }
           row.setStatus('circle-arrow-up');
         },
         UploadProgress: function (_, file, progress, event) {
@@ -250,7 +248,7 @@
           var deferred = baidubce.sdk.Q.defer();
           $.ajax({
             url: kUptokenUrl,
-            dataType: 'json',
+            dataType: 'jsonp',
             data: {sts: sts, filename: file.name}
           }).done(function (payload) {
             uploader.setOptions({

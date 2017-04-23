@@ -19,6 +19,12 @@
         };
     }
 
+    /**
+     * Promise
+     *
+     * @param {Function} fn The executor.
+     * @class
+     */
     function Promise(fn) {
         if (typeof this !== 'object') {
             throw new TypeError('Promises must be constructed via new');
@@ -117,6 +123,14 @@
         self._deferreds = null;
     }
 
+    /**
+     * Handler
+     *
+     * @class
+     * @param {*} onFulfilled The onFulfilled.
+     * @param {*} onRejected The onRejected.
+     * @param {*} promise The promise.
+     */
     function Handler(onFulfilled, onRejected, promise) {
         this.onFulfilled = typeof onFulfilled === 'function' ? onFulfilled : null;
         this.onRejected = typeof onRejected === 'function' ? onRejected : null;
