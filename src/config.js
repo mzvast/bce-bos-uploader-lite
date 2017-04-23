@@ -65,8 +65,8 @@ var kDefaultOptions = {
     // 分片上传的时候，每个分片的大小，默认(4M)
     chunk_size: '4mb',
 
-    // 分块上传时,是否允许断点续传，默认(true)
-    bos_multipart_auto_continue: true,
+    // 分块上传时,是否允许断点续传，默认(false)
+    bos_multipart_auto_continue: false,
 
     // 分开上传的时候，localStorage里面key的生成方式，默认是 `default`
     // 如果需要自定义，可以通过 XXX

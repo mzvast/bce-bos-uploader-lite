@@ -12,11 +12,11 @@ IE8+, Firefox, Chrome, Safari, Opera
 
 注意：下面要介绍部分内容可能需要科学上网才可以访问，所以请自备梯子。
 
-#### 初始化 bucket
+#### 初级：初始化 bucket
 
 主要是完成 bucket cors 的配置，可以参考 [文档手工完成设置](https://cloud.baidu.com/doc/BOS/BestPractise.html#.7B.0B.56.71.A6.B0.9A.33.4D.A1.4E.F2.A8.19.1D.A0)，或者借助 [bce-sdk-js-usage](https://github.com/leeight/bce-sdk-js-usage) 自动初始化。
 
-NOTE: 这里推荐使用 [bce-sdk-js-usage](https://github.com/leeight/bce-sdk-js-usage) 来初始化操作，因为它包含了一些服务端所需的代码，后续签名计算的逻辑需要借助它来完成。
+> NOTE: 这里推荐使用 [bce-sdk-js-usage](https://github.com/leeight/bce-sdk-js-usage) 来初始化操作，因为它包含了一些服务端所需的代码，后续签名计算的逻辑需要借助它来完成。
 
 执行 `npm run prepare` 之后，如果顺利的话，应该可以看到类似如下的输出：
 
@@ -28,7 +28,7 @@ Set public-read to bos://<your bucket>
 crossdomain.xml to bos://<your bucket>/crossdomain.xml
 ```
 
-#### 准备一个最简单的页面
+#### 初级：准备一个最简单的页面
 
 请参考这个示例页面 <http://output.jsbin.com/nawaket>。  
 如果你的 bucket 不是 bj region，那么请在 `bos_endpoint` 地方填写实际的地址。
@@ -42,9 +42,9 @@ crossdomain.xml to bos://<your bucket>/crossdomain.xml
 
 如果上面的操作一切顺利的话，此时就可以在这个页面实现文件直传的工作。
 
-#### 关于 uptoken_url
+#### 初级：关于 uptoken_url
 
-实际应用中，`bos_ak` 和 `bos_sk` 是不应该暴露出来的，所以我们支持了 `uptoken_url` 这个参数来在服务器动态的计算签名。只需要在初始化的时候，设置这个参数即可：
+在实际应用中，处于安全因素的考虑，`bos_ak` 和 `bos_sk` 是不应该暴露出来的，所以我们支持了 `uptoken_url` 参数来在服务器动态的计算签名。只需要在初始化的时候，设置这个参数即可：
 
 ```javascript
 var uploader = new baidubce.bos.Uploader({
@@ -58,7 +58,7 @@ var uploader = new baidubce.bos.Uploader({
 
 完整的例子请参考：<http://output.jsbin.com/jadici>
 
-#### 关于 get_new_uptoken
+#### 中级：关于 get_new_uptoken
 
 在上面一个例子中，每次上传文件的时候，都会请求 `uptoken_url` 来计算签名。不过因为 BOS 已经支持了 [临时访问授权](https://cloud.baidu.com/doc/BOS/API/15.5CSTS.E7.AE.80.E4.BB.8B.html) 的机制，所以在初始化的时候，通过设置 `get_new_uptoken: false`，可以让 Uploader 自动从 `uptoken_url` 获取一个临时的 ak, sk, sessionToken，之后文件上传的时候就可以在浏览器端计算签名了，从而可以减少对 `uptoken_url` 的访问。
 
@@ -71,41 +71,115 @@ var uploader = new baidubce.bos.Uploader({
   ...
 ```
 
-完整的例子请参考：<http://output.jsbin.com/jadici>
+> 这种情况下，如果在 Uploader 初始化的时候，没有设置 `bos_bucket` 参数，是无法正常的初始化 ak, sk, sessionToken，也就无法上传文件。所以需要在执行 `uploader.setOptions()` 设置了 `bos_bucket` 之后，手工调用 `uploader.refreshStsToken()` 重新初始化一下，之后才可以调用 `uploader.start()`。
 
+```javascript
+uploader.setOptions({
+  bos_bucket: bucket,
+  bos_endpoint: endpoint
+});
+uploader.refreshStsToken().then(function () {        
+  uploader.start();
+})
+```
 
-### 支持的配置参数
+完整的例子请参考：<http://output.jsbin.com/zebihu>
+
+#### 高级：关于 uptoken 的有效期
+
+通过 STS 获取的临时授权，如果过期之后，需要重新获取。为了尽可能降低过期的情况出现的概率，可以在每次文件上传之前，重新获取一次 STS 临时授权。
+
+> 其实就这个时候就跟在服务器端签名的情况基本差不多了，唯一不同的情况是对于分片上传的时候每个分片是不需要往服务器端发请求的，可以在浏览器端计算出来
+
+```javascript
+var uploader = new baidubce.bos.Uploader({
+  ...
+  init: {
+    Key: function (_, file) {
+      var kBucket = $('#bos_bucket').val();
+      var kBosEndpoint = $('#bos_endpoint').val();
+      var kUptokenUrl = 'http://localhost:8801/ack';
+      var sts = JSON.stringify(baidubce.utils.getDefaultACL(kBucket));
+      
+      var deferred = baidubce.sdk.Q.defer();
+      $.ajax({
+        url: kUptokenUrl,
+        dataType: 'jsonp',
+        data: {sts: sts, filename: file.name}
+      }).done(function (payload) {
+        uploader.setOptions({
+          bos_ak: payload.AccessKeyId,
+          bos_sk: payload.SecretAccessKey,
+          uptoken: payload.SessionToken,
+          bos_endpoint: kBosEndpoint
+        });
+        
+        var date = new Date();
+        var year = date.getFullYear();
+        var month = date.getMonth() + 1;
+        if (month < 10) {
+          month = '0' + month;
+        }
+        var day = date.getDate();
+        if (day < 10) {
+          day = '0' + day;
+        }
+        var key = year + '/' + month + '/' + day + '/' + file.name;
+        deferred.resolve({key: key, bucket: kBucket});
+      });
+      return deferred.promise;
+    }
+  },
+  ...
+```
+
+完整的例子请参考：<http://output.jsbin.com/zalupur>
+
+### Uploader 支持的配置参数
+
+#### 基本设置
 
 |*名称*|*是否必填*|*默认值*|*说明*|
 |-----|---------|-------|-----|
-|bos_bucket|Y|无|需要上传到的Bucket|
-|uptoken_url|Y|无|用来进行服务端签名的URL，需要支持JSONP|
-|browse_button|Y|无|需要初始化的`<input type="file"/>`|
-|bos_endpoint|N|http://bos.bj.baidubce.com|BOS服务器的地址|
+|browse_button|Y|无|例如 `#file`|
+|bos_bucket|N|无|需要上传到的Bucket|
+|bos_endpoint|N|https://bj.bcebos.com|BOS服务器的地址|
+|bos_task_parallel|N|3|队列中文件并行上传的个数|
+|auto_start|N|false|选择文件之后，是否自动上传|
+|multi_selection|N|false|是否可以选择多个文件|
+|accept|N|-|可以支持选择的文件类型，例如 `mp4,avi,txt` 等等|
+|flash_swf_url|Y|-|mOxie Flash文件的地址。如果要支持IE低版本，必须设置这个参数|
+
+#### 认证相关
+
+|*名称*|*是否必填*|*默认值*|*说明*|
+|-----|---------|-------|-----|
+|uptoken_url|N|无|用来进行服务端签名的URL，需要支持JSONP|
 |bos_ak|N|无|如果没有设置`uptoken_url`的话，必须有`ak`和`sk`这个配置才可以工作|
 |bos_sk|N|无|如果没有设置`uptoken_url`的话，必须有`ak`和`sk`这个配置才可以工作|
-|bos_appendable|N|false|是否采用Append的方式上传文件**不支持IE低版本**|
-|bos_task_parallel|N|3|队列中文件并行上传的个数|
 |uptoken|N|无|sts token的内容|
 |get_new_uptoken|N|true|如果设置为false，会自动获取到Sts Token，上传的过程中可以减少一些请求|
-|auth_stripped_headers|N|['User-Agent', 'Connection']|如果计算签名的时候，需要剔除一些headers，可以配置这个参数|
-|multi_selection|N|false|是否可以选择多个文件|
-|dir_selection|N|false|是否允许选择目录(有些浏览器开启了这个选型之后，只能选择目录，无法选择文件)|
+
+#### 失败重试
+
+|*名称*|*是否必填*|*默认值*|*说明*|
+|-----|---------|-------|-----|
 |max_retries|N|0|如果上传文件失败之后，支持的重试次数。默认不重试|
-|auto_start|N|false|选择文件之后，是否自动上传|
+|retry_interval|N|1000|如果失败之后，重试的间隔，默认1000ms|
+
+#### 大文件相关（分片上传相关的参数）
+
+|*名称*|*是否必填*|*默认值*|*说明*|
+|-----|---------|-------|-----|
 |max_file_size|N|100M|可以选择的最大文件，超过这个值之后，会被忽略掉|
-|bos_multipart_min_size|N|10M|超过这个值之后，采用分片上传的策略。如果想让所有的文件都采用分片上传，把这个值设置为0即可|
+|bos_multipart_min_size|N|10M|超过这个值之后，采用分片上传的策略。如果想让所有的文件都采用分片上传，把这个值设置为0即可。**如果浏览器不支持xhr2，这个设置是无意义的**|
 |chunk_size|N|4M|分片上传的时候，每个分片的大小（如果没有切换到分片上传的策略，这个值没意义）|
-|bos_multipart_auto_continue|N|true|是否开启断点续传，如果设置成false，则UploadResume和UploadResumeError事件不会生效|
-|bos_multipart_local_key_generator|N|defaults|计算localStorage里面key的策略，可选值有`defaults`和`md5`|
-|accept|-|-|可以支持选择的文件类型|
-|flash_swf_url|-|-|mOxie Flash文件的地址|
 
 ### 支持的事件
 
-在初始化 uploader 的时候，可以通过设置 init 来传递一些 回掉函数，然后 uploader 在合适的时机，会调用这些回掉函数，然后传递必要的参数。例如：
+在 Uploader初始化的时候，可以通过设置 init 来传递一些回掉函数，然后 Uploader 在合适的时机，会调用这些回掉函数。例如：
 
-```js
+```javascript
 var uploader = new baidubce.bos.Uploader({
   init: {
     PostInit: function () {
@@ -120,6 +194,8 @@ var uploader = new baidubce.bos.Uploader({
       // return new Promise(function (resolve, reject) {
       //   setTimeout(function () {
       //     resolve(file.name);
+      //     或者
+      //     resolve({key: file.name, bucket: 'xxx'});
       //   }, 2000);
       // });
     },
@@ -159,12 +235,6 @@ var uploader = new baidubce.bos.Uploader({
     },
     UploadComplete: function () {
       // 队列里面的文件上传结束了，调用这个函数
-    },
-    UploadResume: function (_, file, partList, event) {
-      // 断点续传生效时，调用这个函数，partList表示上次中断时，已上传完成的分块列表
-    },
-    UploadResumeError: function (_, file, error, event) {
-      // 尝试进行断点续传失败时，调用这个函数
     }
   }
 });
@@ -195,5 +265,3 @@ var uploader = new baidubce.bos.Uploader({
 2. `uptoken`
 3. `bos_bucket`
 4. `bos_endpoint`
-
---
