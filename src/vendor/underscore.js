@@ -7,10 +7,29 @@
 
 var isArray = require('async.util.isarray');
 var noop = require('async.util.noop');
-var isFunction = require('lodash.isfunction');
 var isNumber = require('lodash.isnumber');
 var isObject = require('lodash.isobject');
 var isString = require('lodash.isstring');
+
+function isFunction(value) {
+    return typeof value === 'function';
+}
+
+function extend(source, var_args) {
+    for (var i = 1; i < arguments.length; i++) {
+        var item = arguments[i];
+        if (item && isObject(item)) {
+            var oKeys = keys(item);
+            for (var j = 0; j < oKeys.length; j++) {
+                var key = oKeys[j];
+                var value = item[key];
+                source[key] = value;
+            }
+        }
+    }
+
+    return source;
+}
 
 function map(array, callback, context) {
     var result = [];
@@ -132,7 +151,7 @@ function keys(obj) {
 
 exports.bind = bind;
 exports.each = foreach;
-exports.extend = require('lodash.assign');
+exports.extend = extend;
 exports.filter = filter;
 exports.find = find;
 exports.isArray = isArray;
