@@ -1,59 +1,77 @@
-### Baidu Cloud Engine BOS Uploader
+### Baidu Cloud Engine BOS Uploader (Lite)
 
-bce-bos-uploader 是基于 [bce-sdk-js](https://github.com/baidubce/bce-sdk-js) 开发的一个 ui 组件，易用性更好。
+bce-bos-uploader-lite 是 [bce-bos-uploader](https://github.com/leeight/bce-bos-uploader) 的精简版，裁剪了不太常用的功能组件，保留了核心的上传功能，当前版本 `*.min.js` 文件大小在 gzip 前后的情况是 47k / 16k。
 
-DEMO地址：<http://leeight.github.io/bce-bos-uploader/>
+DEMO地址：<https://leeight.github.io/bce-bos-uploader-lite/>
 
 ### 支持的浏览器
 
-1. 基于Xhr2和[File API](http://caniuse.com/#feat=fileapi)，可以支持：IE10+, Firefox/Chrome/Opera 最新版
-2. 借助[mOxie](https://github.com/moxiecode/moxie)，可以支持IE低版本（6,7,8,9）
+IE8+, Firefox, Chrome, Safari, Opera
 
 ### 如何使用
 
-```
-bower install bce-bos-uploader
-```
+注意：下面要介绍部分内容可能需要科学上网才可以访问，所以请自备梯子。
 
-写一个最简单的页面：
+#### 初始化 bucket
 
-```html
-<!doctype html>
-<html>
-  <head>
-    <meta charset="utf-8" />
-    <title>bce-bos-uploader simple demo</title>
-    <!--[if lt IE 8]><script src="./bower_components/json3/lib/json3.min.js"></script><![endif]-->
-    <!--[if lt IE 9]><script src="./bower_components/js-polyfills/es5.js"></script><![endif]-->
-    <!--[if lt IE 10]><script src="./bower_components/moxie/bin/js/moxie.js"></script><![endif]-->
-    <script src="./bower_components/jquery/dist/jquery.min.js"></script>
-    <script src="./bower_components/bce-bos-uploader/bce-bos-uploader.bundle.js"></script>
-  </head>
-  <body>
-    <input type="file" id="file"
-           data-multi_selection="true"
-           data-bos_bucket="baidubce"
-           data-uptoken_url="http://127.0.0.1:1337/ack" />
-    <script>new baidubce.bos.Uploader('#file');</script>
-  </body>
-</html>
+主要是完成 bucket cors 的配置，可以参考 [文档手工完成设置](https://cloud.baidu.com/doc/BOS/BestPractise.html#.7B.0B.56.71.A6.B0.9A.33.4D.A1.4E.F2.A8.19.1D.A0)，或者借助 [bce-sdk-js-usage](https://github.com/leeight/bce-sdk-js-usage) 自动初始化。
+
+NOTE: 这里推荐使用 [bce-sdk-js-usage](https://github.com/leeight/bce-sdk-js-usage) 来初始化操作，因为它包含了一些服务端所需的代码，后续签名计算的逻辑需要借助它来完成。
+
+执行 `npm run prepare` 之后，如果顺利的话，应该可以看到类似如下的输出：
+
+```
+Generated backend/php/Config.php
+Generated backend/java/src/main/java/com/baidu/inf/bce/Config.java
+Add cors config to bos://<your bucket>
+Set public-read to bos://<your bucket>
+crossdomain.xml to bos://<your bucket>/crossdomain.xml
 ```
 
-> 关于 uptoken_url 应该如何实现，以及如何设置过 Bucket 的 CORS 属性，请参考 bce-sdk-js 的文档：[在浏览器中直接上传文件到bos](http://baidubce.github.io/bce-sdk-js/docs/advanced-topics-basic-example-in-browser.html#content) 和 [服务端签名](http://baidubce.github.io/bce-sdk-js/docs/advanced-topics-server-signature.html#content)
+#### 准备一个最简单的页面
 
-当然，也可以去掉 html tag 里面的 data 属性，直接用JS的方式来初始化：
+请参考这个示例页面 <http://output.jsbin.com/nawaket>。  
+如果你的 bucket 不是 bj region，那么请在 `bos_endpoint` 地方填写实际的地址。
 
-```html
-<input type="file" id="file" />
-<script>
+|*region*|*endpoint*|
+|-----|-----|
+|bj|https://bj.bcebos.com|
+|gz|https://gz.bcebos.com|
+|su|https://su.bcebos.com|
+|hk|https://hk.bcebos.com|
+
+如果上面的操作一切顺利的话，此时就可以在这个页面实现文件直传的工作。
+
+#### 关于 uptoken_url
+
+实际应用中，`bos_ak` 和 `bos_sk` 是不应该暴露出来的，所以我们支持了 `uptoken_url` 这个参数来在服务器动态的计算签名。只需要在初始化的时候，设置这个参数即可：
+
+```javascript
 var uploader = new baidubce.bos.Uploader({
   browse_button: '#file',
-  bos_bucket: 'baidubce',
   multi_selection: true,
-  uptoken_url: 'http://127.0.0.1:1337/ack'
-});
-</script>
+  uptoken_url: 'http://localhost:8801/ack', // <-- 新增的参数
+  ...
 ```
+
+然后按照 [bce-sdk-js-usage](https://github.com/leeight/bce-sdk-js-usage) 的 README 里面的介绍，启动一个服务，比如 `cd backend/nodejs && node main.js`
+
+完整的例子请参考：<http://output.jsbin.com/jadici>
+
+#### 关于 get_new_uptoken
+
+在上面一个例子中，每次上传文件的时候，都会请求 `uptoken_url` 来计算签名。不过因为 BOS 已经支持了 [临时访问授权](https://cloud.baidu.com/doc/BOS/API/15.5CSTS.E7.AE.80.E4.BB.8B.html) 的机制，所以在初始化的时候，通过设置 `get_new_uptoken: false`，可以让 Uploader 自动从 `uptoken_url` 获取一个临时的 ak, sk, sessionToken，之后文件上传的时候就可以在浏览器端计算签名了，从而可以减少对 `uptoken_url` 的访问。
+
+```javascript
+var uploader = new baidubce.bos.Uploader({
+  browse_button: '#file',
+  multi_selection: true,
+  uptoken_url: 'http://localhost:8801/ack',
+  get_new_uptoken: false,       // <-- 新增的参数
+  ...
+```
+
+完整的例子请参考：<http://output.jsbin.com/jadici>
 
 
 ### 支持的配置参数
@@ -82,60 +100,6 @@ var uploader = new baidubce.bos.Uploader({
 |bos_multipart_local_key_generator|N|defaults|计算localStorage里面key的策略，可选值有`defaults`和`md5`|
 |accept|-|-|可以支持选择的文件类型|
 |flash_swf_url|-|-|mOxie Flash文件的地址|
-
-#### 关于 bos_policy
-
-BOS为了支持低版本的IE浏览器，开发了 PostObject 接口，简单来说，就是支持通过 Form 表单的形式来直接把文件上传到 BOS。为了保证安全性，一般我们的 bucket 权限都是 `public-read`，因此在上传的表单里面添加必须的字段 `policy` 和 `signature`，对应到我们的配置项里面，就是 `bos_policy` 和 `bos_policy_signature`。
-
-其中 `bos_policy` 的默认值是
-
-```
-{
-  "expiration": "当前时间 + 24小时",
-  "conditions": [
-    {"bucket": "配置项里面的 bos_bucket 的名字"}
-  ]
-}
-```
-
-`conditions` 还支持的参数有`key` 和 `content-length-range`，例如：
-
-```
-{
-  "expiration": "当前时间 + 24小时",
-  "conditions": [
-    {"bucket": "配置项里面的 bos_bucket 的名字"},
-    {"key": "abc*"},
-    ["content-length-range", 0, 100]
-  ]
-}
-```
-
-`bos_policy_signature`是通过 `sk` 在后端对 `bos_policy` 进行签名得到的结果，简单来说，算法是这样子的
-
-```js
-var crypto = require('crypto');
-
-var sk = 'xxx';
-var policyBase64 = new Buffer(JSON.stringify(policy)).toString('base64');
-var sha256Hmac = crypto.createHmac('sha256', sk);
-sha256Hmac.update(policyBase64);
-var signature = sha256Hmac.digest('hex');
-```
-
-flash_swf_url 是 [mOxie](https://github.com/moxiecode/moxie) 提供的在低版本IE下面，通过 Flash 来模拟 XMLHttpRequest 和 FormData 接口的文件。
-
-如果把 bucket 的权限设置成了 public-read-write，那么其实任何人都可以往 bucket 里面上传文件了，此时就不需要有 bos_policy 了，需要显示的设置成 `null`.
-
-如果只设置了 bos_policy, 那么在需要 bos_policy_signature 的时候，会通过 uptoken_url 发起 JSONP 请求向后端来获取，需要返回的数据格式是：
-
-```
-jsonp({
-  policy: 'xx',
-  signature: 'yy',
-  accessKey: 'zz'
-});
-```
 
 ### 支持的事件
 
@@ -211,7 +175,6 @@ var uploader = new baidubce.bos.Uploader({
 
 ### 对外提供的接口
 
-
 #### start()
 
 当 auto_start 设置为 false 的时候，需要手工调用 `start` 来开启上传的工作。
@@ -219,3 +182,18 @@ var uploader = new baidubce.bos.Uploader({
 #### stop()
 
 调用 stop 之后，会终止对文件队列的处理。需要注意的是，不是立即停止上传，而是等到当前的文件处理结束（成功/失败）之后，才会停下来。
+
+### remove(file)
+
+删除队列中的一个文件，如果文件正在上传，那么就会中断上传。
+
+### setOptions(options)
+
+动态的设置 bce-bos-uploader-lite 的参数，目前只支持设置如下几个参数：
+
+1. `bos_credentials`, `bos_ak`, `bos_sk`
+2. `uptoken`
+3. `bos_bucket`
+4. `bos_endpoint`
+
+--

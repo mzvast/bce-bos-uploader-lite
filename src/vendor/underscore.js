@@ -115,8 +115,9 @@ function pick(object, var_args, context) {
 
         for (i = 0; i < args.length; i++) {
             key = args[i];
-            value = object[key];
-            result[key] = value;
+            if (object.hasOwnProperty(key)) {
+                result[key] = object[key];
+            }
         }
     }
 
