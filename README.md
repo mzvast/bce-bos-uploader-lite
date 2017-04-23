@@ -1,12 +1,16 @@
 ### Baidu Cloud Engine BOS Uploader (Lite)
 
-bce-bos-uploader-lite 是 [bce-bos-uploader](https://github.com/leeight/bce-bos-uploader) 的精简版，裁剪了不太常用的功能组件，保留了核心的上传功能，当前版本 `*.min.js` 文件大小在 gzip 前后的情况是 47k / 16k。
-
-DEMO地址：<https://leeight.github.io/bce-bos-uploader-lite/>
+bce-bos-uploader-lite 是 [bce-bos-uploader](https://github.com/leeight/bce-bos-uploader) 的精简版，裁剪了不太常用的功能组件，保留了核心的上传功能，当前 1.0.2 版本 `*.min.js` 文件大小在 gzip 前后的情况是 47k / 16k。
 
 ### 支持的浏览器
 
 IE8+, Firefox, Chrome, Safari, Opera
+
+```html
+<!--[if lte IE 9]><script src="https://cdn.rawgit.com/moxiecode/moxie/v1.4.1/bin/js/moxie.min.js"></script><![endif]-->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/1.12.4/jquery.min.js"></script>
+<script src="https://bce.bdstatic.com/bce-bos-uploader-lite/1.0.2/bce-bos-uploader-lite.min.js"></script>
+```
 
 ### 如何使用
 
@@ -41,11 +45,11 @@ crossdomain.xml to bos://<your bucket>/crossdomain.xml
 |su|https://su.bcebos.com|
 |hk|https://hk.bcebos.com|
 
-如果上面的操作一切顺利的话，此时就可以在这个页面实现文件直传的工作。
+如果上面的操作一切顺利的话，此时就可以在 [basic.html](http://cdn.rawgit.com/leeight/bce-bos-uploader-lite/lite/demo/basic.html) 实现文件直传的工作。
 
 #### 初级：关于 uptoken_url
 
-在实际应用中，处于安全因素的考虑，`bos_ak` 和 `bos_sk` 是不应该暴露出来的，所以我们支持了 `uptoken_url` 参数来在服务器动态的计算签名。只需要在初始化的时候，设置这个参数即可：
+不过在实际应用中，出于安全因素的考虑，`bos_ak` 和 `bos_sk` 是不会暴露出来的，所以我们支持了 `uptoken_url` 参数来在服务器动态的计算签名。用法也很简单，只需要在初始化的时候，设置这个参数即可：
 
 ```javascript
 var uploader = new baidubce.bos.Uploader({
@@ -61,7 +65,7 @@ var uploader = new baidubce.bos.Uploader({
 
 #### 中级：关于 get_new_uptoken
 
-在上面一个例子中，每次上传文件的时候，都会请求 `uptoken_url` 来计算签名。不过因为 BOS 已经支持了 [临时访问授权](https://cloud.baidu.com/doc/BOS/API/15.5CSTS.E7.AE.80.E4.BB.8B.html) 的机制，所以在初始化的时候，通过设置 `get_new_uptoken: false`，可以让 Uploader 自动从 `uptoken_url` 获取一个临时的 ak, sk, sessionToken，之后文件上传的时候就可以在浏览器端计算签名了，从而可以减少对 `uptoken_url` 的访问。
+在 uptoken_url.html 示例中，每次上传文件的时候，都会请求 `uptoken_url` 来计算签名。现在 BOS 已经支持了 [临时访问授权](https://cloud.baidu.com/doc/BOS/API/15.5CSTS.E7.AE.80.E4.BB.8B.html) 的机制，所以在初始化的时候，通过设置 `get_new_uptoken: false`，可以让 Uploader 自动从 `uptoken_url` 获取一个临时的 ak, sk, sessionToken，之后文件上传的时候就可以在浏览器端计算签名了，从而可以减少对 `uptoken_url` 的访问。
 
 ```javascript
 var uploader = new baidubce.bos.Uploader({
