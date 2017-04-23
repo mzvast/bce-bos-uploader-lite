@@ -2,6 +2,7 @@
  * @file src/vendor/q.js
  * @author leeight
  */
+var Promise = require('./Promise');
 
 exports.resolve = function () {
     return Promise.resolve.apply(Promise, arguments);
