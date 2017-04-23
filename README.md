@@ -236,7 +236,7 @@ var uploader = new baidubce.bos.Uploader({
     },
     FileUploaded: function (_, file, info) {
       // 文件上传成功之后，调用这个函数
-      var url = [bos_endpoint, info.body.bucket, info.body.object].join('/');
+      var url = info.body.location;
       console.log(url);
     },
     UploadPartProgress: function (_, file, progress, event) {
