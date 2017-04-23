@@ -633,6 +633,14 @@ Uploader.prototype._uploadNextImpl = function (file) {
 
         var TaskConstructor = PutObjectTask;
         if (multipart === 'auto'
+            // 对于 moxie.XMLHttpRequest 来说，无法获取 getResponseHeader('ETag')
+            // 导致在 completeMultipartUpload 的时候，无法传递正确的参数
+            // 因此需要禁止使用 moxie.XMLHttpRequest 使用 MultipartTask
+            // 除非用自己本地计算的 md5 作为 getResponseHeader('ETag') 的代替值，不过还是有一些问题：
+            // 1. MultipartTask 需要对文件进行分片，但是使用 moxie.XMLHttpRequest 的时候，明显有卡顿的问题（因为 Flash 把整个文件都读取到内存中，然后再分片）
+            //    导致处理大文件的时候性能很差
+            // 2. 本地计算 md5 需要额外引入库，导致 bce-bos-uploader 的体积变大
+            // 综上所述，在使用 moxie 的时候，禁止 MultipartTask
             && self._xhr2Supported
             && file.size > options.bos_multipart_min_size) {
             TaskConstructor = MultipartTask;
