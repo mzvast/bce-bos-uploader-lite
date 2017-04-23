@@ -43,6 +43,16 @@ crossdomain.xml to bos://<your bucket>/crossdomain.xml
 |su|http://su.bcebos.com|
 |hk|http://hk.bcebos.com|
 
+Uploader初始化的时候，需要设置 `browse_button` 参数，如果需要支持低版本的IE，还需要设置 `flash_swf_url` 参数，例如：
+
+```javascript
+var uploader = new baidubce.bos.Uploader({
+  browse_button: '#file',
+  flash_swf_url: '../bower_components/moxie/bin/flash/Moxie.swf',
+  ...
+```
+> `flash_swf_url` 的地址需要跟当前页面是同域的
+
 如果上面的操作一切顺利的话，此时就可以在 [basic.html](http://cdn.rawgit.com/leeight/bce-bos-uploader-lite/fbc50638ae9d61d0fc6e3f5747b1afb9eabdad9a/demo/basic.html) 实现文件直传的工作。
 
 #### 初级：关于 uptoken_url
@@ -52,6 +62,7 @@ crossdomain.xml to bos://<your bucket>/crossdomain.xml
 ```javascript
 var uploader = new baidubce.bos.Uploader({
   browse_button: '#file',
+  flash_swf_url: '../bower_components/moxie/bin/flash/Moxie.swf',
   multi_selection: true,
   uptoken_url: 'http://localhost:8801/ack', // <-- 新增的参数
   ...
@@ -68,6 +79,7 @@ var uploader = new baidubce.bos.Uploader({
 ```javascript
 var uploader = new baidubce.bos.Uploader({
   browse_button: '#file',
+  flash_swf_url: '../bower_components/moxie/bin/flash/Moxie.swf',
   multi_selection: true,
   uptoken_url: 'http://localhost:8801/ack',
   get_new_uptoken: false,       // <-- 新增的参数
