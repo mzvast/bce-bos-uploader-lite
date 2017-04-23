@@ -72,6 +72,15 @@ function filter(array, callback, context) {
     return res;
 }
 
+function indexOf(array, value) {
+    for (var i = 0; i < array.length; i++) {
+        if (array[i] === value) {
+            return i;
+        }
+    }
+    return -1;
+}
+
 function omit(object, var_args) {
     var args = isArray(var_args)
         ? var_args
@@ -82,7 +91,7 @@ function omit(object, var_args) {
     var oKeys = keys(object);
     for (var i = 0; i < oKeys.length; i++) {
         var key = oKeys[i];
-        if (args.indexOf(key) === -1) {
+        if (indexOf(args, key) === -1) {
             result[key] = object[key];
         }
     }

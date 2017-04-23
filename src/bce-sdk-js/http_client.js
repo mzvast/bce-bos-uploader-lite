@@ -138,7 +138,9 @@ HttpClient.prototype._doRequest = function (httpMethod, requestUrl, requestHeade
             var isJSON = /application\/json/.test(contentType);
             var responseBody = isJSON ? JSON.parse(xhr.responseText) : xhr.responseText;
             if (!responseBody) {
-                responseBody = {};
+                responseBody = {
+                    location: requestUrl
+                };
             }
 
             var isSuccess = status >= 200 && status < 300 || status === 304;

@@ -40,10 +40,10 @@ crossdomain.xml to bos://<your bucket>/crossdomain.xml
 
 |*region*|*endpoint*|
 |-----|-----|
-|bj|https://bj.bcebos.com|
-|gz|https://gz.bcebos.com|
-|su|https://su.bcebos.com|
-|hk|https://hk.bcebos.com|
+|bj|http://bj.bcebos.com|
+|gz|http://gz.bcebos.com|
+|su|http://su.bcebos.com|
+|hk|http://hk.bcebos.com|
 
 如果上面的操作一切顺利的话，此时就可以在 [basic.html](http://cdn.rawgit.com/leeight/bce-bos-uploader-lite/lite/demo/basic.html) 实现文件直传的工作。
 
@@ -148,12 +148,12 @@ var uploader = new baidubce.bos.Uploader({
 |-----|---------|-------|-----|
 |browse_button|Y|无|例如 `#file`|
 |bos_bucket|N|无|需要上传到的Bucket|
-|bos_endpoint|N|https://bj.bcebos.com|BOS服务器的地址|
+|bos_endpoint|N|http://bj.bcebos.com|BOS服务器的地址|
 |bos_task_parallel|N|3|队列中文件并行上传的个数|
 |auto_start|N|false|选择文件之后，是否自动上传|
 |multi_selection|N|false|是否可以选择多个文件|
 |accept|N|-|可以支持选择的文件类型，例如 `mp4,avi,txt` 等等|
-|flash_swf_url|Y|-|mOxie Flash文件的地址。如果要支持IE低版本，必须设置这个参数|
+|flash_swf_url|Y|-|mOxie Flash文件的地址。如果要支持IE低版本，必须设置这个参数，而且需要跟所处的页面是同域的|
 
 #### 认证相关
 

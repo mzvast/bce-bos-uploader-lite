@@ -57,7 +57,7 @@ PutObjectTask.prototype.start = function (opt_maxRetries) {
         dispatcher.dispatchEvent(events.kUploadProgress, [file, 1]);
 
         response.body.bucket = bucket;
-        response.body.object = object;
+        response.body.key = object;
 
         dispatcher.dispatchEvent(events.kFileUploaded, [file, response]);
     })

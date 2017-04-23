@@ -19,6 +19,7 @@ var kDefaultOptions = {
     runtimes: 'html5',
 
     // bos服务器的地址，默认(http://bj.bcebos.com)
+    // 这里不应该是 https://bj.bcebos.com，否则 Moxie.swf 可能有问题，原因未知
     bos_endpoint: 'http://bj.bcebos.com',
 
     // 默认的 ak 和 sk 配置

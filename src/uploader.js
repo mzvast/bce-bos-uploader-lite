@@ -546,7 +546,7 @@ Uploader.prototype.setOptions = function (options) {
 Uploader.prototype.refreshStsToken = function () {
     var self = this;
     var options = self.options;
-    var stsMode = self._xhr2Supported
+    var stsMode = true // self._xhr2Supported
         && options.bos_bucket
         && options.uptoken_url
         && options.get_new_uptoken === false;

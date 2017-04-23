@@ -448,9 +448,12 @@ exports.fixXhr = function (options, isBos) {
             var response = null;
             try {
                 response = JSON.parse(xhr.response || '{}');
+                response.location = xhrUri;
             }
             catch (ex) {
-                response = {};
+                response = {
+                    location: xhrUri
+                };
             }
 
             if (xhr.status >= 200 && xhr.status < 300) {
