@@ -17,7 +17,6 @@
 var Q = require('./vendor/q');
 var u = require('./vendor/underscore');
 var utils = require('./utils');
-var tracker = require('./tracker');
 var events = require('./events');
 var kDefaultOptions = require('./config');
 var PutObjectTask = require('./put_object_task');
@@ -184,10 +183,6 @@ Uploader.prototype._invoke = function (methodName, args, throwErrors) {
 Uploader.prototype._init = function () {
     var options = this.options;
     var accept = options.accept;
-
-    if (options.tracker_id) {
-        tracker.init(options.tracker_id);
-    }
 
     var btnElement = $(options.browse_button);
     var nodeName = btnElement.prop('nodeName');
@@ -474,6 +469,7 @@ Uploader.prototype.start = function () {
         this._networkInfo.reset();
 
         var taskParallel = this.options.bos_task_parallel;
+        // 这里没有使用 async.eachLimit 的原因是 this._files 可能会被动态的修改
         utils.eachLimit(this._files, taskParallel,
             function (file, callback) {
                 file._previousLoaded = 0;
@@ -635,13 +631,11 @@ Uploader.prototype._uploadNextImpl = function (file) {
             metas: objectMetas
         });
 
-        var task = null;
+        var TaskConstructor = PutObjectTask;
         if (multipart === 'auto' && file.size > options.bos_multipart_min_size) {
-            task = new MultipartTask(client, eventDispatcher, taskOptions);
+            TaskConstructor = MultipartTask;
         }
-        else {
-            task = new PutObjectTask(client, eventDispatcher, taskOptions);
-        }
+        var task = new TaskConstructor(client, eventDispatcher, taskOptions);
 
         self._uploadingFiles[file.uuid] = file;
 

@@ -18,10 +18,12 @@
 var kDefaultOptions = {
     runtimes: 'html5',
 
-    // bos服务器的地址，默认(http://bos.bj.baidubce.com)
-    bos_endpoint: 'http://bos.bj.baidubce.com',
+    // bos服务器的地址，默认(http://bj.bcebos.com)
+    bos_endpoint: 'http://bj.bcebos.com',
 
     // 默认的 ak 和 sk 配置
+    bos_ak: null,
+    bos_sk: null,
     bos_credentials: null,
 
     // 如果切换到 appendable 模式，最大只支持 5G 的文件
@@ -100,7 +102,7 @@ var kDefaultOptions = {
 
     // 是否要禁用统计，默认不禁用
     // 如果需要禁用，把 tracker_id 设置成 null 即可
-    tracker_id: '2e0bc8c5e7ceb25796ba4962e7b57387'
+    tracker_id: null
 };
 
 module.exports = kDefaultOptions;

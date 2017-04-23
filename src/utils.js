@@ -583,8 +583,7 @@ exports.eachLimit = function (tasks, taskParallel, executer, done) {
 };
 
 exports.inherits = function (ChildCtor, ParentCtor) {
-    ChildCtor.prototype = Object.create(ParentCtor.prototype);
-    ChildCtor.prototype.constructor = ChildCtor;
+    return require('./vendor/util').inherits(ChildCtor, ParentCtor);
 };
 
 exports.guessContentType = function (file, opt_ignoreCharset) {
