@@ -5,8 +5,12 @@
  * @author leeight
  */
 
-function noop() {
-}
+var isArray = require('async.util.isarray');
+var noop = require('async.util.noop');
+var isFunction = require('lodash.isfunction');
+var isNumber = require('lodash.isnumber');
+var isObject = require('lodash.isobject');
+var isString = require('lodash.isstring');
 
 function map(array, callback, context) {
     var result = [];
@@ -40,6 +44,57 @@ function filter(array, callback, context) {
         }
     }
     return res;
+}
+
+function omit(object, var_args) {
+    var args = isArray(var_args)
+        ? var_args
+        : [].slice.call(arguments, 1);
+
+    var result = {};
+
+    var oKeys = keys(object);
+    for (var i = 0; i < oKeys.length; i++) {
+        var key = oKeys[i];
+        if (args.indexOf(key) === -1) {
+            result[key] = object[key];
+        }
+    }
+
+    return result;
+}
+
+function pick(object, var_args, context) {
+    var result = {};
+
+    var i;
+    var key;
+    var value;
+
+    if (isFunction(var_args)) {
+        var callback = var_args;
+        var oKeys = keys(object);
+        for (i = 0; i < oKeys.length; i++) {
+            key = oKeys[i];
+            value = object[key];
+            if (callback.call(context, value, key, object)) {
+                result[key] = value;
+            }
+        }
+    }
+    else {
+        var args = isArray(var_args)
+            ? var_args
+            : [].slice.call(arguments, 1);
+
+        for (i = 0; i < args.length; i++) {
+            key = args[i];
+            value = object[key];
+            result[key] = value;
+        }
+    }
+
+    return result;
 }
 
 function bind(fn, context) {
@@ -80,16 +135,14 @@ exports.each = foreach;
 exports.extend = require('lodash.assign');
 exports.filter = filter;
 exports.find = find;
-exports.isArray = require('isarray');
-exports.isFunction = require('lodash.isfunction');
-exports.isNumber = require('lodash.isnumber');
-exports.isObject = require('lodash.isobject');
-exports.isString = require('lodash.isstring');
+exports.isArray = isArray;
+exports.isFunction = isFunction;
+exports.isNumber = isNumber;
+exports.isObject = isObject;
+exports.isString = isString;
 exports.map = map;
-exports.omit = require('lodash.omit');
-exports.pick = require('lodash.pick');
-exports.some = require('lodash.some');
-exports.uniq = require('lodash.uniq');
+exports.omit = omit;
+exports.pick = pick;
 exports.keys = keys;
 exports.noop = noop;
 

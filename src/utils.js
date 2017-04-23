@@ -293,12 +293,12 @@ exports.expandAccept = function (accept) {
 };
 
 exports.extToMimeType = function (exts) {
-    var mimeTypes = u.uniq(u.map(exts.split(','), function (ext) {
+    var mimeTypes = u.map(exts.split(','), function (ext) {
         if (ext.indexOf('/') !== -1) {
             return ext;
         }
         return MimeType.guess(ext);
-    }));
+    });
 
     return mimeTypes.join(',');
 };
