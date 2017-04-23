@@ -14,8 +14,6 @@ IE8+, Firefox, Chrome, Safari, Opera
 
 ### 如何使用
 
-注意：下面要介绍部分内容可能需要科学上网才可以访问，所以请自备梯子。
-
 #### 初级：初始化 bucket
 
 主要是完成 bucket cors 的配置，可以参考 [文档手工完成设置](https://cloud.baidu.com/doc/BOS/BestPractise.html#.7B.0B.56.71.A6.B0.9A.33.4D.A1.4E.F2.A8.19.1D.A0)，或者借助 [bce-sdk-js-usage](https://github.com/leeight/bce-sdk-js-usage) 自动初始化。
