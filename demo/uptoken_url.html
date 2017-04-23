@@ -61,6 +61,7 @@
     var uploader = new baidubce.bos.Uploader({
       browse_button: '#file',
       multi_selection: true,
+      uptoken_url: 'http://localhost:8801/ack',
       init: {
         FilesAdded: function (_, files) {
           for (var i = 0; i < files.length; i++) {
@@ -73,38 +74,18 @@
           }
         },
         Key: function (_, file) {
-          var kBucket = $('#bos_bucket').val();
-          var kBosEndpoint = $('#bos_endpoint').val();
-          var kUptokenUrl = 'http://localhost:8801/ack';
-          var sts = JSON.stringify(baidubce.utils.getDefaultACL(kBucket));
-
-          var deferred = baidubce.sdk.Q.defer();
-          $.ajax({
-            url: kUptokenUrl,
-            dataType: 'jsonp',
-            data: {sts: sts, filename: file.name}
-          }).done(function (payload) {
-            uploader.setOptions({
-              bos_ak: payload.AccessKeyId,
-              bos_sk: payload.SecretAccessKey,
-              uptoken: payload.SessionToken,
-              bos_endpoint: kBosEndpoint
-            });
-
-            var date = new Date();
-            var year = date.getFullYear();
-            var month = date.getMonth() + 1;
-            if (month < 10) {
-              month = '0' + month;
-            }
-            var day = date.getDate();
-            if (day < 10) {
-              day = '0' + day;
-            }
-            var key = year + '/' + month + '/' + day + '/' + file.name;
-            deferred.resolve({key: key, bucket: kBucket});
-          });
-          return deferred.promise;
+          var date = new Date();
+          var year = date.getFullYear();
+          var month = date.getMonth() + 1;
+          if (month < 10) {
+            month = '0' + month;
+          }
+          var day = date.getDate();
+          if (day < 10) {
+            day = '0' + day;
+          }
+          var key = year + '/' + month + '/' + day + '/' + file.name;
+          return key;
         },
         FileUploaded: function (_, file, info) {
           $('li[fid="' + file.uuid + '"]').remove();
@@ -122,6 +103,11 @@
         alert('请填写 bucket, endpoint 等配置信息');
         return false;
       }
+
+      uploader.setOptions({
+        bos_bucket: bucket,
+        bos_endpoint: endpoint
+      });
       uploader.start();
     });
     </script>

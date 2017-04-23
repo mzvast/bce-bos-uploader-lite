@@ -35,6 +35,12 @@
           <legend>配置信息</legend>
           <table>
             <tr>
+              <th>bos_ak</th><td><input id="bos_ak" /></td>
+            </tr>
+            <tr>
+              <th>bos_sk</th><td><input id="bos_sk" /></td>
+            </tr>
+            <tr>
               <th>bos_bucket</th><td><input id="bos_bucket" /></td>
             </tr>
             <tr>
@@ -73,38 +79,18 @@
           }
         },
         Key: function (_, file) {
-          var kBucket = $('#bos_bucket').val();
-          var kBosEndpoint = $('#bos_endpoint').val();
-          var kUptokenUrl = 'http://localhost:8801/ack';
-          var sts = JSON.stringify(baidubce.utils.getDefaultACL(kBucket));
-
-          var deferred = baidubce.sdk.Q.defer();
-          $.ajax({
-            url: kUptokenUrl,
-            dataType: 'jsonp',
-            data: {sts: sts, filename: file.name}
-          }).done(function (payload) {
-            uploader.setOptions({
-              bos_ak: payload.AccessKeyId,
-              bos_sk: payload.SecretAccessKey,
-              uptoken: payload.SessionToken,
-              bos_endpoint: kBosEndpoint
-            });
-
-            var date = new Date();
-            var year = date.getFullYear();
-            var month = date.getMonth() + 1;
-            if (month < 10) {
-              month = '0' + month;
-            }
-            var day = date.getDate();
-            if (day < 10) {
-              day = '0' + day;
-            }
-            var key = year + '/' + month + '/' + day + '/' + file.name;
-            deferred.resolve({key: key, bucket: kBucket});
-          });
-          return deferred.promise;
+          var date = new Date();
+          var year = date.getFullYear();
+          var month = date.getMonth() + 1;
+          if (month < 10) {
+            month = '0' + month;
+          }
+          var day = date.getDate();
+          if (day < 10) {
+            day = '0' + day;
+          }
+          var key = year + '/' + month + '/' + day + '/' + file.name;
+          return key;
         },
         FileUploaded: function (_, file, info) {
           $('li[fid="' + file.uuid + '"]').remove();
@@ -116,12 +102,21 @@
     });
 
     $('#start').click(function () {
+      var ak = $('#bos_ak').val();
+      var sk = $('#bos_sk').val();
       var bucket = $('#bos_bucket').val();
       var endpoint = $('#bos_endpoint').val();
-      if (!bucket || !endpoint) {
-        alert('请填写 bucket, endpoint 等配置信息');
+      if (!ak || !sk || !bucket || !endpoint) {
+        alert('请填写 ak, sk, bucket, endpoint 等配置信息');
         return false;
       }
+
+      uploader.setOptions({
+        bos_ak: ak,
+        bos_sk: sk,
+        bos_bucket: bucket,
+        bos_endpoint: endpoint
+      });
       uploader.start();
     });
     </script>

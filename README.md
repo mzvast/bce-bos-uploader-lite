@@ -30,7 +30,8 @@ crossdomain.xml to bos://<your bucket>/crossdomain.xml
 
 #### 初级：准备一个最简单的页面
 
-请参考这个示例页面 <http://output.jsbin.com/nawaket>。  
+请参考这个示例页面 [basic.html](http://cdn.rawgit.com/leeight/bce-bos-uploader-lite/lite/demo/basic.html)。
+
 如果你的 bucket 不是 bj region，那么请在 `bos_endpoint` 地方填写实际的地址。
 
 |*region*|*endpoint*|
@@ -56,7 +57,7 @@ var uploader = new baidubce.bos.Uploader({
 
 然后按照 [bce-sdk-js-usage](https://github.com/leeight/bce-sdk-js-usage) 的 README 里面的介绍，启动一个服务，比如 `cd backend/nodejs && node main.js`
 
-完整的例子请参考：<http://output.jsbin.com/jadici>
+完整的例子请参考：[uptoken_url.html](http://cdn.rawgit.com/leeight/bce-bos-uploader-lite/lite/demo/uptoken_url.html)
 
 #### 中级：关于 get_new_uptoken
 
@@ -83,7 +84,7 @@ uploader.refreshStsToken().then(function () {
 })
 ```
 
-完整的例子请参考：<http://output.jsbin.com/zebihu>
+完整的例子请参考：[get_new_uptoken.html](http://cdn.rawgit.com/leeight/bce-bos-uploader-lite/lite/demo/get_new_uptoken.html)
 
 #### 高级：关于 uptoken 的有效期
 
@@ -133,7 +134,7 @@ var uploader = new baidubce.bos.Uploader({
   ...
 ```
 
-完整的例子请参考：<http://output.jsbin.com/zalupur>
+完整的例子请参考：[advanced.html](http://cdn.rawgit.com/leeight/bce-bos-uploader-lite/lite/demo/advanced.html)
 
 ### Uploader 支持的配置参数
 
