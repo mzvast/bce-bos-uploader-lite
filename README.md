@@ -1,6 +1,6 @@
 ### Baidu Cloud Engine BOS Uploader (Lite)
 
-bce-bos-uploader-lite 是 [bce-bos-uploader](https://github.com/leeight/bce-bos-uploader) 的精简版，裁剪了不太常用的功能组件，保留了核心的上传功能，当前 1.0.3 版本 `*.min.js` 文件大小在 gzip 前后的情况是 47k / 16k。
+bce-bos-uploader-lite 是 [bce-bos-uploader](https://github.com/leeight/bce-bos-uploader) 的精简版，裁剪了不太常用的功能组件，保留了核心的上传功能，当前 1.0.4 版本 `*.min.js` 文件大小在 gzip 前后的情况是 47k / 16k。
 
 ### 支持的浏览器
 
@@ -9,7 +9,7 @@ IE8+, Firefox, Chrome, Safari, Opera
 ```html
 <!--[if lte IE 9]><script src="https://cdn.rawgit.com/moxiecode/moxie/v1.4.1/bin/js/moxie.min.js"></script><![endif]-->
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/1.12.4/jquery.min.js"></script>
-<script src="https://bce.bdstatic.com/bce-bos-uploader-lite/1.0.3/bce-bos-uploader-lite.min.js"></script>
+<script src="https://bce.bdstatic.com/bce-bos-uploader-lite/1.0.4/bce-bos-uploader-lite.min.js"></script>
 ```
 
 ### 如何使用
@@ -271,6 +271,10 @@ var uploader = new baidubce.bos.Uploader({
 ### remove(file)
 
 删除队列中的一个文件，如果文件正在上传，那么就会中断上传。
+
+### addFile(file)
+
+动态的往上传队列中添加一个文件，只支持 [W3C File API](https://www.w3.org/TR/FileAPI/)
 
 ### setOptions(options)
 

@@ -74,8 +74,10 @@ MultipartTask.prototype.start = function () {
                 loaded: loaded,
                 total: tasks.length
             };
+            file._previousLoaded = loaded * chunkSize;
             if (loaded) {
-                dispatcher.dispatchEvent(events.kUploadProgress, [file, loaded / tasks.length, null]);
+                var progress = file._previousLoaded / file.size;
+                dispatcher.dispatchEvent(events.kUploadProgress, [file, progress, null]);
             }
 
             async.mapLimit(tasks, multipartParallel, self._uploadPart(state),
@@ -278,6 +280,7 @@ MultipartTask.prototype._uploadPart = function (state) {
         var retryInterval = self.options.retry_interval;
 
         var blob = item.file.slice(item.start, item.stop + 1);
+        blob._parentUUID = item.file.uuid;    // 后续根据分片来查找原始文件的时候，会用到
         blob._previousLoaded = 0;
 
         var uploadPartXhr = self.client.uploadPartFromBlob(item.bucket, item.object,
@@ -286,8 +289,8 @@ MultipartTask.prototype._uploadPart = function (state) {
 
         return uploadPartXhr.then(function (response) {
                 ++state.loaded;
-                var progress = state.loaded / state.total;
-                dispatcher.dispatchEvent(events.kUploadProgress, [item.file, progress, null]);
+                // var progress = state.loaded / state.total;
+                // dispatcher.dispatchEvent(events.kUploadProgress, [item.file, progress, null]);
 
                 var result = {
                     uploadId: item.uploadId,

@@ -66,6 +66,7 @@
                 <span class="glyphicon glyphicon-paperclip"></span> 选择1G以内的文件
                 <!-- <input type="file" id="file" /> -->
               </span>
+              <button id="gen-random-file" class="btn btn-default">生成随机文件</button>
               <button type="submit" class="btn btn-success" disabled>开始上传</button>
               <span class="network-speed"></span>
             </div>
@@ -185,6 +186,7 @@
       bos_multipart_parallel: 5,
       chunk_size: '8mb',
       max_retries: 2,
+      bos_multipart_auto_continue: true,
       // accept: 'mp4,flv,avi,asf,wmv,mov,webm,mpeg4,ts,mpg,rm,rmvb,mkv',
       // accept: 'image/*,video/*',
       // bos_appendable: true,
@@ -228,6 +230,7 @@
           row.setStatus('circle-arrow-up');
         },
         UploadProgress: function (_, file, progress, event) {
+          console.log('%s => %s', file.__id, progress);
           var row = getRowById(file.__id);
           row.setProgress(progress);
         },
@@ -270,7 +273,7 @@
         FileUploaded: function (_, file, info) {
           var time = ((new Date().getTime() - file.__startTime) / 1000).toFixed(2);
           var row = getRowById(file.__id);
-          var url = toUrl(info.body.object);
+          var url = info.body.location; // toUrl(info.body.object);
           row.setStatus('ok-circle', true);
           row.setUrl(url);
           row.setTime(time);
@@ -346,6 +349,19 @@
       }
     });
 
+    function getBlob(size) {
+      var data = new Int8Array(size);
+      return new Blob([data], {type: 'text/plain'});
+    }
+
+    $('#gen-random-file').click(function () {
+      var maxSize = Math.pow(2, 20) * 50;   // 50M
+      var size = parseInt(Math.random() * maxSize, 10);
+      var filename = Date.now() + '.txt';
+      var file = new File([getBlob(size)], filename);
+      uploader.addFile(file);
+      return false;
+    });
     $('button[type=submit]').click(function () {
       uploader.start();
       return false;

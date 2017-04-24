@@ -362,15 +362,7 @@ Uploader.prototype._filterFiles = function (candidates) {
     return this._invoke(events.kFilesFilter, [files]) || files;
 };
 
-function buildAbortHandler(item, self) {
-    return function () {
-        item._aborted = true;
-        self._invoke(events.kAborted, [null, item]);
-    };
-}
-
 Uploader.prototype._onFilesAdded = function (e) {
-    var self = this;
     var files = e.target.files;
     if (!files) {
         // IE7, IE8 低版本浏览器的处理
@@ -381,22 +373,7 @@ Uploader.prototype._onFilesAdded = function (e) {
     }
     files = this._filterFiles(files);
     if (u.isArray(files) && files.length) {
-        var totalBytes = 0;
-        for (var i = 0; i < files.length; i++) {
-            var item = files[i];
-
-            // 这里是 abort 的默认实现，开始上传的时候，会改成另外的一种实现方式
-            // 默认的实现是为了支持在没有开始上传之前，也可以取消上传的需求
-            item.abort = buildAbortHandler(item, self);
-
-            // 内部的 uuid，外部也可以使用，比如 remove(item.uuid) / remove(item)
-            item.uuid = utils.uuid();
-
-            totalBytes += item.size;
-        }
-        this._networkInfo.totalBytes += totalBytes;
-        this._files.push.apply(this._files, files);
-        this._invoke(events.kFilesAdded, [files]);
+        this.addFiles(files);
     }
 
     if (this.options.auto_start) {
@@ -428,8 +405,8 @@ Uploader.prototype._onUploadProgress = function (e, httpContext) {
     var progress = e.lengthComputable
         ? e.loaded / e.total
         : 0;
-
-    this._networkInfo.loadedBytes += (e.loaded - file._previousLoaded);
+    var delta = e.loaded - file._previousLoaded;
+    this._networkInfo.loadedBytes += delta;
     this._invoke(events.kNetworkSpeed, this._networkInfo.dump());
     file._previousLoaded = e.loaded;
 
@@ -439,9 +416,52 @@ Uploader.prototype._onUploadProgress = function (e, httpContext) {
         // 此时的 file 是 slice 的结果，可能没有自定义的属性
         // 比如 demo 里面的 __id, __mediaId 之类的
         eventType = events.kUploadPartProgress;
+        this._invoke(eventType, [file, progress, e]);
+
+        // 然后需要从 file 获取原始的文件（因为 file 此时是一个分片）
+        // 之后再触发一次 events.kUploadProgress 的事件
+        var uuid = file._parentUUID;
+        var originalFile = this._uploadingFiles[uuid];
+        var originalFileProgress = 0;
+        if (originalFile) {
+            originalFile._previousLoaded += delta;
+            originalFileProgress = Math.min(originalFile._previousLoaded / originalFile.size, 1);
+            this._invoke(events.kUploadProgress, [originalFile, originalFileProgress, null]);
+        }
+    }
+    else {
+        this._invoke(eventType, [file, progress, e]);
+    }
+};
+
+Uploader.prototype.addFiles = function (files) {
+    function buildAbortHandler(item, self) {
+        return function () {
+            item._aborted = true;
+            self._invoke(events.kAborted, [null, item]);
+        };
     }
 
-    this._invoke(eventType, [file, progress, e]);
+    var totalBytes = 0;
+    for (var i = 0; i < files.length; i++) {
+        var item = files[i];
+
+        // 这里是 abort 的默认实现，开始上传的时候，会改成另外的一种实现方式
+        // 默认的实现是为了支持在没有开始上传之前，也可以取消上传的需求
+        item.abort = buildAbortHandler(item, this);
+
+        // 内部的 uuid，外部也可以使用，比如 remove(item.uuid) / remove(item)
+        item.uuid = utils.uuid();
+
+        totalBytes += item.size;
+    }
+    this._networkInfo.totalBytes += totalBytes;
+    this._files.push.apply(this._files, files);
+    this._invoke(events.kFilesAdded, [files]);
+};
+
+Uploader.prototype.addFile = function (file) {
+    this.addFiles([file]);
 };
 
 Uploader.prototype.remove = function (item) {
