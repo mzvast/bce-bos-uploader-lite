@@ -32,7 +32,7 @@ crossdomain.xml to bos://<your bucket>/crossdomain.xml
 
 #### 初级：准备一个最简单的页面
 
-请参考这个示例页面 [basic.html](http://cdn.rawgit.com/leeight/bce-bos-uploader-lite/fbc50638ae9d61d0fc6e3f5747b1afb9eabdad9a/demo/basic.html)。
+请参考这个示例页面 [basic.html](http://cdn.rawgit.com/leeight/bce-bos-uploader-lite/2ca620c4e0a4bbb72adeba7a2aa785a2b73cb955/demo/basic.html)。
 
 如果你的 bucket 不是 bj region，那么请在 `bos_endpoint` 地方填写实际的地址。
 
@@ -53,7 +53,7 @@ var uploader = new baidubce.bos.Uploader({
 ```
 > `flash_swf_url` 的地址需要跟当前页面是同域的
 
-如果上面的操作一切顺利的话，此时就可以在 [basic.html](http://cdn.rawgit.com/leeight/bce-bos-uploader-lite/fbc50638ae9d61d0fc6e3f5747b1afb9eabdad9a/demo/basic.html) 实现文件直传的工作。
+如果上面的操作一切顺利的话，此时就可以在 [basic.html](http://cdn.rawgit.com/leeight/bce-bos-uploader-lite/2ca620c4e0a4bbb72adeba7a2aa785a2b73cb955/demo/basic.html) 实现文件直传的工作。
 
 #### 初级：关于 uptoken_url
 
@@ -70,7 +70,7 @@ var uploader = new baidubce.bos.Uploader({
 
 然后按照 [bce-sdk-js-usage](https://github.com/leeight/bce-sdk-js-usage) 的 README 里面的介绍，启动一个服务，比如 `cd backend/nodejs && node main.js`
 
-完整的例子请参考：[uptoken_url.html](http://cdn.rawgit.com/leeight/bce-bos-uploader-lite/fbc50638ae9d61d0fc6e3f5747b1afb9eabdad9a/demo/uptoken_url.html)
+完整的例子请参考：[uptoken_url.html](http://cdn.rawgit.com/leeight/bce-bos-uploader-lite/2ca620c4e0a4bbb72adeba7a2aa785a2b73cb955/demo/uptoken_url.html)
 
 #### 中级：关于 get_new_uptoken
 
@@ -98,7 +98,7 @@ uploader.refreshStsToken().then(function () {
 })
 ```
 
-完整的例子请参考：[get_new_uptoken.html](http://cdn.rawgit.com/leeight/bce-bos-uploader-lite/fbc50638ae9d61d0fc6e3f5747b1afb9eabdad9a/demo/get_new_uptoken.html)
+完整的例子请参考：[get_new_uptoken.html](http://cdn.rawgit.com/leeight/bce-bos-uploader-lite/2ca620c4e0a4bbb72adeba7a2aa785a2b73cb955/demo/get_new_uptoken.html)
 
 #### 高级：关于 uptoken 的有效期
 
@@ -148,7 +148,7 @@ var uploader = new baidubce.bos.Uploader({
   ...
 ```
 
-完整的例子请参考：[advanced.html](http://cdn.rawgit.com/leeight/bce-bos-uploader-lite/fbc50638ae9d61d0fc6e3f5747b1afb9eabdad9a/demo/advanced.html)
+完整的例子请参考：[advanced.html](http://cdn.rawgit.com/leeight/bce-bos-uploader-lite/2ca620c4e0a4bbb72adeba7a2aa785a2b73cb955/demo/advanced.html)
 
 ### Uploader 支持的配置参数
 
