@@ -268,15 +268,15 @@ var uploader = new baidubce.bos.Uploader({
 
 调用 stop 之后，会终止对文件队列的处理。需要注意的是，不是立即停止上传，而是等到当前的文件处理结束（成功/失败）之后，才会停下来。
 
-### remove(file)
+#### remove(file)
 
 删除队列中的一个文件，如果文件正在上传，那么就会中断上传。
 
-### addFile(file)
+#### addFile(file)
 
 动态的往上传队列中添加一个文件，只支持 [W3C File API](https://www.w3.org/TR/FileAPI/)
 
-### setOptions(options)
+#### setOptions(options)
 
 动态的设置 bce-bos-uploader-lite 的参数，目前只支持设置如下几个参数：
 
