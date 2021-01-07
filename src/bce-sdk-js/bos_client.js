@@ -27,8 +27,8 @@ var HttpClient = require('./http_client');
 var BceBaseClient = require('./bce_base_client');
 var MimeType = require('./mime.types');
 
-var MAX_PUT_OBJECT_LENGTH = 5368709120;     // 5G
-var MAX_USER_METADATA_SIZE = 2048;          // 2 * 1024
+var MAX_PUT_OBJECT_LENGTH = 5368709120; // 5G
+var MAX_USER_METADATA_SIZE = 2048; // 2 * 1024
 
 /**
  * BOS service api
@@ -56,7 +56,7 @@ BosClient.prototype.deleteObject = function (bucketName, key, options) {
     return this.sendRequest('DELETE', {
         bucketName: bucketName,
         key: key,
-        config: options.config
+        config: options.config,
     });
 };
 
@@ -72,11 +72,16 @@ BosClient.prototype.putObject = function (bucketName, key, data, options) {
         key: key,
         body: data,
         headers: options.headers,
-        config: options.config
+        config: options.config,
     });
 };
 
-BosClient.prototype.putObjectFromBlob = function (bucketName, key, blob, options) {
+BosClient.prototype.putObjectFromBlob = function (
+    bucketName,
+    key,
+    blob,
+    options
+) {
     var headers = {};
 
     // https://developer.mozilla.org/en-US/docs/Web/API/Blob/size
@@ -94,36 +99,52 @@ BosClient.prototype.getObjectMetadata = function (bucketName, key, options) {
     return this.sendRequest('HEAD', {
         bucketName: bucketName,
         key: key,
-        config: options.config
+        config: options.config,
     });
 };
 
-BosClient.prototype.initiateMultipartUpload = function (bucketName, key, options) {
+BosClient.prototype.initiateMultipartUpload = function (
+    bucketName,
+    key,
+    options
+) {
     options = options || {};
 
     var headers = {};
-    headers[H.CONTENT_TYPE] = options[H.CONTENT_TYPE] || MimeType.guess(path.extname(key));
+    headers[H.CONTENT_TYPE] =
+        options[H.CONTENT_TYPE] || MimeType.guess(path.extname(key));
     return this.sendRequest('POST', {
         bucketName: bucketName,
         key: key,
         params: {uploads: ''},
         headers: headers,
-        config: options.config
+        config: options.config,
     });
 };
 
-BosClient.prototype.abortMultipartUpload = function (bucketName, key, uploadId, options) {
+BosClient.prototype.abortMultipartUpload = function (
+    bucketName,
+    key,
+    uploadId,
+    options
+) {
     options = options || {};
 
     return this.sendRequest('DELETE', {
         bucketName: bucketName,
         key: key,
         params: {uploadId: uploadId},
-        config: options.config
+        config: options.config,
     });
 };
 
-BosClient.prototype.completeMultipartUpload = function (bucketName, key, uploadId, partList, options) {
+BosClient.prototype.completeMultipartUpload = function (
+    bucketName,
+    key,
+    uploadId,
+    partList,
+    options
+) {
     var headers = {};
     headers[H.CONTENT_TYPE] = 'application/json; charset=UTF-8';
     options = this._checkOptions(u.extend(headers, options));
@@ -134,15 +155,27 @@ BosClient.prototype.completeMultipartUpload = function (bucketName, key, uploadI
         body: JSON.stringify({parts: partList}),
         headers: options.headers,
         params: {uploadId: uploadId},
-        config: options.config
+        config: options.config,
     });
 };
 
-BosClient.prototype.uploadPartFromBlob = function (bucketName, key, uploadId, partNumber,
-                                                   partSize, blob, options) {
+BosClient.prototype.uploadPartFromBlob = function (
+    bucketName,
+    key,
+    uploadId,
+    partNumber,
+    partSize,
+    blob,
+    options
+) {
     if (blob.size !== partSize) {
-        throw new TypeError(util.format('Invalid partSize %d and data length %d',
-            partSize, blob.size));
+        throw new TypeError(
+            util.format(
+                'Invalid partSize %d and data length %d',
+                partSize,
+                blob.size
+            )
+        );
     }
 
     var headers = {};
@@ -157,9 +190,9 @@ BosClient.prototype.uploadPartFromBlob = function (bucketName, key, uploadId, pa
         headers: options.headers,
         params: {
             partNumber: partNumber,
-            uploadId: uploadId
+            uploadId: uploadId,
         },
-        config: options.config
+        config: options.config,
     });
 };
 
@@ -178,12 +211,18 @@ BosClient.prototype.listParts = function (bucketName, key, uploadId, options) {
         bucketName: bucketName,
         key: key,
         params: options.params,
-        config: options.config
+        config: options.config,
     });
 };
 
 BosClient.prototype.listMultipartUploads = function (bucketName, options) {
-    var allowedParams = ['delimiter', 'maxUploads', 'keyMarker', 'prefix', 'uploads'];
+    var allowedParams = [
+        'delimiter',
+        'maxUploads',
+        'keyMarker',
+        'prefix',
+        'uploads',
+    ];
 
     options = this._checkOptions(options || {}, allowedParams);
     options.params.uploads = '';
@@ -191,11 +230,17 @@ BosClient.prototype.listMultipartUploads = function (bucketName, options) {
     return this.sendRequest('GET', {
         bucketName: bucketName,
         params: options.params,
-        config: options.config
+        config: options.config,
     });
 };
 
-BosClient.prototype.appendObject = function (bucketName, key, data, offset, options) {
+BosClient.prototype.appendObject = function (
+    bucketName,
+    key,
+    data,
+    offset,
+    options
+) {
     if (!key) {
         throw new TypeError('key should not be empty.');
     }
@@ -211,11 +256,17 @@ BosClient.prototype.appendObject = function (bucketName, key, data, offset, opti
         body: data,
         headers: options.headers,
         params: params,
-        config: options.config
+        config: options.config,
     });
 };
 
-BosClient.prototype.appendObjectFromBlob = function (bucketName, key, blob, offset, options) {
+BosClient.prototype.appendObjectFromBlob = function (
+    bucketName,
+    key,
+    blob,
+    offset,
+    options
+) {
     var headers = {};
 
     // https://developer.mozilla.org/en-US/docs/Web/API/Blob/size
@@ -237,15 +288,15 @@ BosClient.prototype.sendRequest = function (httpMethod, varArgs) {
         headers: {},
         params: {},
         config: {},
-        outputStream: null
+        outputStream: null,
     };
     var args = u.extend(defaultArgs, varArgs);
 
     var config = u.extend({}, this.config, args.config);
     var resource = [
         '/v1',
-        strings.normalize(args.bucketName || ''),
-        strings.normalize(args.key || '', false)
+        strings.normalize(args.bucketName || '', false),
+        strings.normalize(args.key || '', false),
     ].join('/');
 
     if (config.sessionToken) {
@@ -255,15 +306,20 @@ BosClient.prototype.sendRequest = function (httpMethod, varArgs) {
     return this.sendHTTPRequest(httpMethod, resource, args, config);
 };
 
-BosClient.prototype.sendHTTPRequest = function (httpMethod, resource, args, config) {
+BosClient.prototype.sendHTTPRequest = function (
+    httpMethod,
+    resource,
+    args,
+    config
+) {
     var client = this;
-    var agent = this._httpAgent = new HttpClient(config);
+    var agent = (this._httpAgent = new HttpClient(config));
 
     var httpContext = {
         httpMethod: httpMethod,
         resource: resource,
         args: args,
-        config: config
+        config: config,
     };
     u.each(['progress', 'error', 'abort'], function (eventName) {
         agent.on(eventName, function (evt) {
@@ -271,8 +327,13 @@ BosClient.prototype.sendHTTPRequest = function (httpMethod, resource, args, conf
         });
     });
 
-    var promise = this._httpAgent.sendRequest(httpMethod, resource, args.body,
-        args.headers, args.params, u.bind(this.createSignature, this),
+    var promise = this._httpAgent.sendRequest(
+        httpMethod,
+        resource,
+        args.body,
+        args.headers,
+        args.params,
+        u.bind(this.createSignature, this),
         args.outputStream
     );
 
@@ -298,46 +359,55 @@ BosClient.prototype._checkOptions = function (options, allowedParams) {
 
 BosClient.prototype._prepareObjectHeaders = function (options) {
     var allowedHeaders = {};
-    u.each([
-        H.CONTENT_LENGTH,
-        H.CONTENT_ENCODING,
-        H.CONTENT_MD5,
-        H.X_BCE_CONTENT_SHA256,
-        H.CONTENT_TYPE,
-        H.CONTENT_DISPOSITION,
-        H.ETAG,
-        H.SESSION_TOKEN,
-        H.CACHE_CONTROL,
-        H.EXPIRES,
-        H.X_BCE_OBJECT_ACL,
-        H.X_BCE_OBJECT_GRANT_READ
-    ], function (header) {
-        allowedHeaders[header] = true;
-    });
+    u.each(
+        [
+            H.CONTENT_LENGTH,
+            H.CONTENT_ENCODING,
+            H.CONTENT_MD5,
+            H.X_BCE_CONTENT_SHA256,
+            H.CONTENT_TYPE,
+            H.CONTENT_DISPOSITION,
+            H.ETAG,
+            H.SESSION_TOKEN,
+            H.CACHE_CONTROL,
+            H.EXPIRES,
+            H.X_BCE_OBJECT_ACL,
+            H.X_BCE_OBJECT_GRANT_READ,
+        ],
+        function (header) {
+            allowedHeaders[header] = true;
+        }
+    );
 
     var metaSize = 0;
     var headers = u.pick(options, function (value, key) {
         if (allowedHeaders[key]) {
             return true;
-        }
-        else if (/^x\-bce\-meta\-/.test(key)) {
+        } else if (/^x\-bce\-meta\-/.test(key)) {
             metaSize += Buffer.byteLength(key) + Buffer.byteLength('' + value);
             return true;
         }
     });
 
     if (metaSize > MAX_USER_METADATA_SIZE) {
-        throw new TypeError('Metadata size should not be greater than ' + MAX_USER_METADATA_SIZE + '.');
+        throw new TypeError(
+            'Metadata size should not be greater than ' +
+                MAX_USER_METADATA_SIZE +
+                '.'
+        );
     }
 
     if (headers.hasOwnProperty(H.CONTENT_LENGTH)) {
         var contentLength = headers[H.CONTENT_LENGTH];
         if (contentLength < 0) {
             throw new TypeError('content_length should not be negative.');
-        }
-        else if (contentLength > MAX_PUT_OBJECT_LENGTH) { // 5G
-            throw new TypeError('Object length should be less than ' + MAX_PUT_OBJECT_LENGTH
-                + '. Use multi-part upload instead.');
+        } else if (contentLength > MAX_PUT_OBJECT_LENGTH) {
+            // 5G
+            throw new TypeError(
+                'Object length should be less than ' +
+                    MAX_PUT_OBJECT_LENGTH +
+                    '. Use multi-part upload instead.'
+            );
         }
     }
 

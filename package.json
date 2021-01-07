@@ -1,33 +1,35 @@
 {
-  "name": "bce-bos-uploader-lite",
-  "version": "1.0.4",
-  "description": "Baidu Object Storage Uploader (Lite)",
-  "main": "index.js",
-  "scripts": {
-    "test": "node_modules/.bin/mocha -C test",
-    "fecs": "fecs src test index.js",
-    "pack": "node_modules/.bin/browserify index.js -d -s baidubce -t es3ify -p bundle-collapser/plugin -o bce-bos-uploader-lite.js",
-    "minify": "cat bce-bos-uploader-lite.js | uglifyjs --compress --mangle -o bce-bos-uploader-lite.min.js"
-  },
-  "repository": {
-    "type": "git",
-    "url": "https://github.com/leeight/bce-bos-uploader.git"
-  },
-  "author": "leeight@gmail.com",
-  "license": "ISC",
-  "dependencies": {
-    "async.maplimit": "^0.5.2",
-    "async.util.isarray": "^0.5.2",
-    "async.util.noop": "^0.5.2",
-    "lodash.isnumber": "^3.0.3",
-    "lodash.isobject": "^3.0.2"
-  },
-  "devDependencies": {
-    "browserify": "10.2.6",
-    "bundle-collapser": "^1.2.1",
-    "es3ify": "^0.2.1",
-    "expect.js": "^0.3.1",
-    "http-proxy": "^1.13.2",
-    "mocha": "^2.4.5"
-  }
+    "name": "bce-bos-uploader-lite",
+    "version": "1.0.4",
+    "description": "Baidu Object Storage Uploader (Lite)",
+    "main": "index.js",
+    "scripts": {
+        "test": "node_modules/.bin/mocha -C test",
+        "fecs": "fecs src test index.js",
+        "pack": "node_modules/.bin/browserify index.js -d -s baidubce -t es3ify -p bundle-collapser/plugin -o bce-bos-uploader-lite.js",
+        "minify": "cat bce-bos-uploader-lite.js | uglifyjs --compress --mangle -o bce-bos-uploader-lite.min.js"
+    },
+    "repository": {
+        "type": "git",
+        "url": "https://github.com/leeight/bce-bos-uploader.git"
+    },
+    "author": "leeight@gmail.com",
+    "license": "ISC",
+    "dependencies": {
+        "async.maplimit": "^0.5.2",
+        "async.util.isarray": "^0.5.2",
+        "async.util.noop": "^0.5.2",
+        "jquery": "^3.5.1",
+        "lodash.isnumber": "^3.0.3",
+        "lodash.isobject": "^3.0.2"
+    },
+    "devDependencies": {
+        "browserify": "10.2.6",
+        "bundle-collapser": "^1.2.1",
+        "es3ify": "^0.2.1",
+        "expect.js": "^0.3.1",
+        "http-proxy": "^1.13.2",
+        "mocha": "^2.4.5",
+        "uglify": "^0.1.5"
+    }
 }

@@ -14,6 +14,7 @@
  * @author leeight
  */
 
+var $ = require('jquery');
 var Q = require('./vendor/q');
 var utils = require('./utils');
 
@@ -36,7 +37,9 @@ StsTokenManager.prototype.get = function (bucket) {
         return self._cache[bucket];
     }
 
-    return Q.resolve(this._getImpl.apply(this, arguments)).then(function (payload) {
+    return Q.resolve(this._getImpl.apply(this, arguments)).then(function (
+        payload
+    ) {
         self._cache[bucket] = payload;
         return payload;
     });
@@ -55,7 +58,7 @@ StsTokenManager.prototype._getImpl = function (bucket) {
         dataType: viaJsonp ? 'jsonp' : 'json',
         timeout: timeout,
         data: {
-            sts: JSON.stringify(utils.getDefaultACL(bucket))
+            sts: JSON.stringify(utils.getDefaultACL(bucket)),
         },
         success: function (payload) {
             // payload.AccessKeyId
@@ -65,8 +68,10 @@ StsTokenManager.prototype._getImpl = function (bucket) {
             deferred.resolve(payload);
         },
         error: function () {
-            deferred.reject(new Error('Get sts token timeout (' + timeout + 'ms).'));
-        }
+            deferred.reject(
+                new Error('Get sts token timeout (' + timeout + 'ms).')
+            );
+        },
     });
 
     return deferred.promise;
