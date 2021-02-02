@@ -26,6 +26,8 @@ var strings = require('./strings');
 var HttpClient = require('./http_client');
 var BceBaseClient = require('./bce_base_client');
 var MimeType = require('./mime.types');
+var Auth = require('./auth');
+var qs = require('querystring');
 
 var MAX_PUT_OBJECT_LENGTH = 5368709120; // 5G
 var MAX_USER_METADATA_SIZE = 2048; // 2 * 1024
@@ -50,6 +52,52 @@ function BosClient(config) {
 util.inherits(BosClient, BceBaseClient);
 
 // --- B E G I N ---
+
+BosClient.prototype.generatePresignedUrl = function (
+    bucketName,
+    key,
+    timestamp,
+    expirationInSeconds,
+    headers,
+    params,
+    headersToSign,
+    config
+) {
+    config = u.extend({}, this.config, config);
+    params = params || {};
+
+    var resource = path
+        .normalize(
+            path.join(
+                '/v1',
+                /\.[\w\-]+\.bcebos\.com$/.test(config.endpoint)
+                    ? ''
+                    : strings.normalize(bucketName || ''),
+                strings.normalize(key || '', false)
+            )
+        )
+        .replace(/\\/g, '/');
+
+    headers = headers || {};
+    headers.Host = require('url').parse(config.endpoint).host;
+
+    var credentials = config.credentials;
+    var auth = new Auth(credentials.ak, credentials.sk);
+    var authorization = auth.generateAuthorization(
+        'GET',
+        resource,
+        params,
+        headers,
+        timestamp,
+        expirationInSeconds,
+        headersToSign
+    );
+
+    params.authorization = authorization;
+
+    return util.format('%s%s?%s', config.endpoint, resource, qs.encode(params));
+};
+
 BosClient.prototype.deleteObject = function (bucketName, key, options) {
     options = options || {};
 
